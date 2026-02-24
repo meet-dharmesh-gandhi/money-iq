@@ -48,9 +48,13 @@ export default async function Home() {
 			<header className="border-b border-slate-200 bg-white/90 backdrop-blur">
 				<nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
 					<Link href="/" className="flex items-center gap-3">
-						<div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-							MI
-						</div>
+						<Image
+							src="/money-iq-logo.svg"
+							alt="MoneyIQ Logo"
+							width={36}
+							height={36}
+							className="h-9 w-9"
+						/>
 						<span className="text-lg font-semibold tracking-tight">MoneyIQ</span>
 					</Link>
 					<div className="flex items-center gap-3">

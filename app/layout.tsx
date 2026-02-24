@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
 	title: "MoneyIQ",
 	description: "Market news and insights for smarter investing.",
+	icons: {
+		icon: "/money-iq-logo.svg",
+	},
 };
 
 export default function RootLayout({
