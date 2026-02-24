@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 		const result = await signupUser(body);
 
 		return Response.json(result, {
-			status: result.success ? 201 : 400,
+			status: result.success ? 201 : result.requiresEmailVerification ? 202 : 400,
 		});
 	} catch (error) {
 		return Response.json(
