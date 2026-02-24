@@ -6,9 +6,12 @@
 		"dev": "next dev",
 		"build": "next build",
 		"start": "next start",
-		"lint": "eslint"
+		"lint": "eslint",
+		"seed:db": "node scripts/seed-db.js"
 	},
 	"dependencies": {
+		"@types/bcrypt": "^6.0.0",
+		"bcrypt": "^6.0.0",
 		"mongoose": "^8.11.1",
 		"next": "16.1.6",
 		"react": "19.2.3",
