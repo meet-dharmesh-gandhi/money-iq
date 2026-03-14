@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { getCachedNews } from "@/lib/news";
-import StockTicker from "@/components/StockTicker";
+import Navbar from "@/components/Navbar";
+
 import type { NewsListResponse } from "@/types/news/api";
 import type { NewsItem } from "@/types/news/model";
 
@@ -30,49 +31,25 @@ async function fetchNews(): Promise<NewsItem[]> {
 
 export default async function Home() {
 	const news = await fetchNews();
-	const topStockTokens = [
-		"3045",
-		"10666",
-		"2475",
-		"1333",
-		"2885",
-		"1594",
-		"1660",
-		"1795",
-		"11536",
-		"3042",
-	];
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<header className="border-b border-slate-200 bg-white/90 backdrop-blur">
-				<nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-					<Link href="/" className="flex items-center gap-3">
-						<Image
-							src="/money-iq-logo.svg"
-							alt="MoneyIQ Logo"
-							width={36}
-							height={36}
-							className="h-9 w-9"
-						/>
-						<span className="text-lg font-semibold tracking-tight">MoneyIQ</span>
-					</Link>
-					<div className="flex items-center gap-3">
-						<Link
-							href="/login"
-							className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 md:inline-flex"
-						>
-							Log in
-						</Link>
-						<Link
-							href="/signup"
-							className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-						>
-							Get started
-						</Link>
-					</div>
-				</nav>
-			</header>
+			<Navbar
+				actions={[
+					{
+						type: "link",
+						label: "Log in",
+						href: "/login",
+						className: "hidden md:inline-flex",
+					},
+					{
+						type: "link",
+						label: "Get started",
+						href: "/signup",
+						variant: "primary",
+					},
+				]}
+			/>
 
 			<main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
 				<section className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
@@ -107,11 +84,21 @@ export default async function Home() {
 							<div className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1">
 								<span className="h-2 w-2 rounded-full bg-emerald-600"></span>
 								<span className="text-xs font-semibold text-emerald-700">
-									Positive
+									Live Data
 								</span>
 							</div>
-							<p className="text-sm font-semibold text-slate-900">Top 10 stocks</p>
-							<StockTicker exchange="NSE" tokens={topStockTokens} />
+							<p className="text-sm font-semibold text-slate-900 mb-4">
+								Real-time Market Data
+							</p>
+							<p className="text-xs text-slate-600">
+								Visit the dashboard for live stock prices via WebSocket
+							</p>
+							<Link
+								href="/dashboard"
+								className="inline-block mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+							>
+								View Live Dashboard →
+							</Link>
 						</div>
 					</div>
 				</section>

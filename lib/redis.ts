@@ -17,24 +17,31 @@ const cached: RedisCache = globalWithRedis.redisCache ?? {
 globalWithRedis.redisCache = cached;
 
 type RedisConfig = {
-	username: string;
-	password: string;
-	host: string;
-	port: number;
+	username?: string;
+	password?: string;
+	host?: string;
+	port?: number;
+	url?: string;
 };
 
 function getRedisConfig(): RedisConfig {
+	// Support both URL format (simpler) and individual configs
+	const redisUrl = process.env.REDIS_URL;
+	if (redisUrl) {
+		return { url: redisUrl };
+	}
+
 	const host = process.env.REDIS_HOST;
 	const portRaw = process.env.REDIS_PORT;
 	const username = process.env.REDIS_USERNAME ?? "default";
 	const password = process.env.REDIS_PASSWORD;
 
 	if (!host) {
-		throw new Error("REDIS_HOST is not set");
+		throw new Error("REDIS_HOST or REDIS_URL is not set");
 	}
 
 	if (!portRaw) {
-		throw new Error("REDIS_PORT is not set");
+		throw new Error("REDIS_PORT is not set when using individual config");
 	}
 
 	const port = Number(portRaw);
@@ -56,14 +63,21 @@ function getRedisConfig(): RedisConfig {
 
 function createRedisClient(): RedisClientType {
 	const config = getRedisConfig();
-	const client = createClient({
-		username: config.username,
-		password: config.password,
-		socket: {
-			host: config.host,
-			port: config.port,
-		},
-	});
+
+	// Use URL format if available, otherwise use individual configs
+	let client: RedisClientType;
+	if (config.url) {
+		client = createClient({ url: config.url });
+	} else {
+		client = createClient({
+			username: config.username,
+			password: config.password,
+			socket: {
+				host: config.host!,
+				port: config.port!,
+			},
+		});
+	}
 
 	client.on("error", (err) => {
 		console.error("Redis client error:", err);

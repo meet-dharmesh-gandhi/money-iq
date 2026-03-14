@@ -1,8 +1,32 @@
-import { createHmac } from "crypto";
+import { createHmac, randomBytes } from "crypto";
 import type { JWTPayload } from "@/types/auth";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-key-change-in-production";
+// Generate a strong development fallback secret that changes on each restart
+const generateDevSecret = () => {
+	return `dev-${randomBytes(32).toString("hex")}-${Date.now()}`;
+};
+
+const JWT_SECRET =
+	process.env.JWT_SECRET ??
+	(process.env.NODE_ENV === "production"
+		? (() => {
+				throw new Error("JWT_SECRET environment variable is required in production");
+			})()
+		: generateDevSecret());
+
 const TOKEN_EXPIRY = 7 * 24 * 60 * 60; // 7 days
+
+// Warn in development if using fallback secret
+if (process.env.NODE_ENV === "development" && !process.env.JWT_SECRET) {
+	console.warn(
+		"⚠️  Using auto-generated JWT secret in development. Set JWT_SECRET environment variable for production.",
+	);
+}
+
+// Ensure production has secure secret
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+	throw new Error("JWT_SECRET environment variable is required in production for security");
+}
 
 export function encodeJWT(payload: Omit<JWTPayload, "iat" | "exp">): string {
 	const now = Math.floor(Date.now() / 1000);
