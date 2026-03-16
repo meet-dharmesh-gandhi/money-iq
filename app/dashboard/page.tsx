@@ -1,21 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import TabNavigation from "@/components/dashboard/TabNavigation";
-import StocksSection from "@/components/dashboard/StocksSection";
 import IpoSection from "@/components/dashboard/IpoSection";
 import MutualFundsSection from "@/components/dashboard/MutualFundsSection";
 import Sidebar from "@/components/dashboard/Sidebar";
+import StocksSection from "@/components/dashboard/StocksSection";
+import TabNavigation from "@/components/dashboard/TabNavigation";
 import WatchlistManager from "@/components/dashboard/WatchlistManager";
-import WebSocketStatus from "@/components/debug/WebSocketStatus";
-import { useStockData } from "@/hooks/useStockData";
-import { useWatchlist } from "@/hooks/useWatchlist";
+import { ipoWatchlist } from "@/data/dashboardData";
 import { useMutualFunds } from "@/hooks/useMutualFunds";
 import { usePageAwareWebSocket } from "@/hooks/usePageAwareWebSocket";
-import { ipoWatchlist } from "@/data/dashboardData";
+import { useStockData } from "@/hooks/useStockData";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import type { AuthUser } from "@/types/auth";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function DashboardPage() {
 	const router = useRouter();
