@@ -1,12 +1,12 @@
-import type { LiveStock } from "@/types/dashboard";
-import { availableStocks } from "@/utils/stockUtils";
+import type { LiveStock, AvailableStock } from "@/types/dashboard";
 
 interface WatchlistManagerProps {
 	showWatchlistDialog: boolean;
 	setShowWatchlistDialog: (show: boolean) => void;
 	watchlist: string[];
 	watchlistStocks: LiveStock[];
-	availableForSelection: typeof availableStocks;
+	availableStocks: AvailableStock[];
+	availableForSelection: AvailableStock[];
 	selectedStockForWatchlist: string;
 	setSelectedStockForWatchlist: (token: string) => void;
 	addToWatchlist: (token: string) => void;
@@ -18,6 +18,7 @@ export default function WatchlistManager({
 	setShowWatchlistDialog,
 	watchlist,
 	watchlistStocks,
+	availableStocks,
 	availableForSelection,
 	selectedStockForWatchlist,
 	setSelectedStockForWatchlist,

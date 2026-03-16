@@ -1,25 +1,20 @@
 import type { LiveStock } from "@/types/dashboard";
 
 interface StocksSectionProps {
-	stocks: LiveStock[];
 	paginatedStocks: LiveStock[];
+	totalPages: number;
 	lastRefreshLabel: string;
 	stocksCurrentPage: number;
 	setStocksCurrentPage: (page: number) => void;
 }
 
-const STOCKS_PER_PAGE = 6;
-
 export default function StocksSection({
-	stocks,
 	paginatedStocks,
+	totalPages,
 	lastRefreshLabel,
 	stocksCurrentPage,
 	setStocksCurrentPage,
 }: StocksSectionProps) {
-	const totalPages = Math.ceil(stocks.length / STOCKS_PER_PAGE);
-	const stockEnd = stocksCurrentPage * STOCKS_PER_PAGE + STOCKS_PER_PAGE;
-
 	return (
 		<section className="space-y-6">
 			<div className="flex items-end justify-between">
@@ -113,7 +108,7 @@ export default function StocksSection({
 					onClick={() =>
 						setStocksCurrentPage(Math.min(totalPages - 1, stocksCurrentPage + 1))
 					}
-					disabled={stockEnd >= stocks.length}
+					disabled={stocksCurrentPage >= totalPages - 1}
 					className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					Next

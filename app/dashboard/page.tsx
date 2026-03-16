@@ -7,7 +7,7 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import StocksSection from "@/components/dashboard/StocksSection";
 import TabNavigation from "@/components/dashboard/TabNavigation";
 import WatchlistManager from "@/components/dashboard/WatchlistManager";
-import { ipoWatchlist } from "@/data/dashboardData";
+import { useIPOData } from "@/hooks/useIPOData";
 import { useMutualFunds } from "@/hooks/useMutualFunds";
 import { usePageAwareWebSocket } from "@/hooks/usePageAwareWebSocket";
 import { useStockData } from "@/hooks/useStockData";
@@ -27,35 +27,31 @@ export default function DashboardPage() {
 	const [mfCurrentPage, setMfCurrentPage] = useState(0);
 
 	// Custom hooks
-	const { stocks, lastRefresh, handleStockUpdate, handleHistoricalBatch } = useStockData();
+	const {
+		stocks,
+		totalPages: stocksTotalPages,
+		lastRefresh,
+		handleStockUpdate,
+		handleHistoricalBatch,
+	} = useStockData(stocksCurrentPage + 1, 6);
 
 	const {
 		watchlist,
 		watchlistStocks,
+		availableStocks,
 		availableForSelection,
 		selectedStockForWatchlist,
 		setSelectedStockForWatchlist,
 		addToWatchlist,
 		removeFromWatchlist,
 	} = useWatchlist(stocks);
+	const { ipos, totalPages: iposTotalPages, handleIpoUpdate } = useIPOData(ipoCurrentPage + 1, 6);
 
 	const { mutualFunds, mfLoading, mfOffset, mfHasMore, loadMutualFunds } = useMutualFunds();
 
 	// Calculate current page data for WebSocket subscriptions
-	const STOCKS_PER_PAGE = 6;
-	const IPOS_PER_PAGE = 6;
-
-	const paginatedStocks = useMemo(() => {
-		const stockStart = stocksCurrentPage * STOCKS_PER_PAGE;
-		const stockEnd = stockStart + STOCKS_PER_PAGE;
-		return stocks.slice(stockStart, stockEnd);
-	}, [stocks, stocksCurrentPage]);
-
-	const paginatedIpos = useMemo(() => {
-		const ipoStart = ipoCurrentPage * IPOS_PER_PAGE;
-		const ipoEnd = ipoStart + IPOS_PER_PAGE;
-		return ipoWatchlist.slice(ipoStart, ipoEnd);
-	}, [ipoCurrentPage]);
+	const paginatedStocks = useMemo(() => stocks, [stocks]);
+	const paginatedIpos = useMemo(() => ipos, [ipos]);
 
 	// Page-aware WebSocket hook
 	const { status: wsStatus } = usePageAwareWebSocket({
@@ -64,9 +60,7 @@ export default function DashboardPage() {
 		onHistoricalBatch: handleHistoricalBatch,
 		onStockUpdate: handleStockUpdate,
 		paginatedIpos,
-		onIpoUpdate: (update) => {
-			console.log("IPO update:", update);
-		},
+		onIpoUpdate: handleIpoUpdate,
 		onError: (error) => {
 			console.error("WebSocket error:", error);
 		},
@@ -163,8 +157,8 @@ export default function DashboardPage() {
 					{/* Active Section Content */}
 					{activeSection === "stocks" && (
 						<StocksSection
-							stocks={stocks}
 							paginatedStocks={paginatedStocks}
+							totalPages={stocksTotalPages}
 							lastRefreshLabel={lastRefreshLabel}
 							stocksCurrentPage={stocksCurrentPage}
 							setStocksCurrentPage={setStocksCurrentPage}
@@ -173,6 +167,8 @@ export default function DashboardPage() {
 
 					{activeSection === "ipos" && (
 						<IpoSection
+							paginatedIpos={paginatedIpos}
+							totalPages={iposTotalPages}
 							ipoCurrentPage={ipoCurrentPage}
 							setIpoCurrentPage={setIpoCurrentPage}
 						/>
@@ -204,6 +200,7 @@ export default function DashboardPage() {
 				setShowWatchlistDialog={setShowWatchlistDialog}
 				watchlist={watchlist}
 				watchlistStocks={watchlistStocks}
+				availableStocks={availableStocks}
 				availableForSelection={availableForSelection}
 				selectedStockForWatchlist={selectedStockForWatchlist}
 				setSelectedStockForWatchlist={setSelectedStockForWatchlist}

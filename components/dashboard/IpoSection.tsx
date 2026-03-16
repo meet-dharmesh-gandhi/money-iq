@@ -1,22 +1,19 @@
-import { useMemo } from "react";
-import { ipoWatchlist } from "@/data/dashboardData";
+import type { IpoSummary } from "@/types/dashboard";
 
 interface IpoSectionProps {
+	paginatedIpos: IpoSummary[];
+	totalPages: number;
 	ipoCurrentPage: number;
 	setIpoCurrentPage: (page: number) => void;
 }
 
-const IPOS_PER_PAGE = 6;
-
-export default function IpoSection({ ipoCurrentPage, setIpoCurrentPage }: IpoSectionProps) {
-	const paginatedIpos = useMemo(() => {
-		const ipoStart = ipoCurrentPage * IPOS_PER_PAGE;
-		const ipoEnd = ipoStart + IPOS_PER_PAGE;
-		return ipoWatchlist.slice(ipoStart, ipoEnd);
-	}, [ipoCurrentPage]);
-
-	const totalPages = Math.ceil(ipoWatchlist.length / IPOS_PER_PAGE);
-	const ipoEnd = ipoCurrentPage * IPOS_PER_PAGE + IPOS_PER_PAGE;
+export default function IpoSection({
+	paginatedIpos,
+	totalPages,
+	ipoCurrentPage,
+	setIpoCurrentPage,
+}: IpoSectionProps) {
+	const safeTotalPages = Math.max(1, totalPages);
 
 	return (
 		<section className="space-y-6">
@@ -84,11 +81,13 @@ export default function IpoSection({ ipoCurrentPage, setIpoCurrentPage }: IpoSec
 					Previous
 				</button>
 				<span className="text-sm text-slate-600">
-					Page {ipoCurrentPage + 1} of {totalPages}
+					Page {ipoCurrentPage + 1} of {safeTotalPages}
 				</span>
 				<button
-					onClick={() => setIpoCurrentPage(Math.min(totalPages - 1, ipoCurrentPage + 1))}
-					disabled={ipoEnd >= ipoWatchlist.length}
+					onClick={() =>
+						setIpoCurrentPage(Math.min(safeTotalPages - 1, ipoCurrentPage + 1))
+					}
+					disabled={ipoCurrentPage >= safeTotalPages - 1}
 					className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					Next

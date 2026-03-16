@@ -1,10 +1,23 @@
-import { useState, useCallback, useMemo } from "react";
-import type { LiveStock } from "@/types/dashboard";
-import { availableStocks } from "@/utils/stockUtils";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import type { LiveStock, AvailableStock } from "@/types/dashboard";
 
 export const useWatchlist = (stocks: LiveStock[]) => {
-	const [watchlist, setWatchlist] = useState<string[]>(["99926000", "99926009", "99926037"]); // Default 3 stocks
+	const [watchlist, setWatchlist] = useState<string[]>([]);
 	const [selectedStockForWatchlist, setSelectedStockForWatchlist] = useState("");
+
+	const availableStocks = useMemo<AvailableStock[]>(() => {
+		return stocks.map((stock) => ({
+			token: stock.symbol,
+			symbol: stock.symbol,
+			company: stock.company,
+		}));
+	}, [stocks]);
+
+	useEffect(() => {
+		if (watchlist.length === 0 && availableStocks.length > 0) {
+			setWatchlist(availableStocks.slice(0, 3).map((stock) => stock.token));
+		}
+	}, [watchlist.length, availableStocks]);
 
 	// Watchlist management functions
 	const addToWatchlist = useCallback(
@@ -26,22 +39,18 @@ export const useWatchlist = (stocks: LiveStock[]) => {
 
 	// Get watchlist stocks for display
 	const watchlistStocks = useMemo(() => {
-		return stocks.filter((stock) =>
-			watchlist.some((token) => {
-				const stockInfo = availableStocks.find((s) => s.token === token);
-				return stockInfo && stock.symbol === stockInfo.symbol;
-			}),
-		);
+		return stocks.filter((stock) => watchlist.includes(stock.symbol));
 	}, [stocks, watchlist]);
 
 	// Get available stocks for dropdown (excluding already selected)
 	const availableForSelection = useMemo(() => {
 		return availableStocks.filter((stock) => !watchlist.includes(stock.token));
-	}, [watchlist]);
+	}, [availableStocks, watchlist]);
 
 	return {
 		watchlist,
 		watchlistStocks,
+		availableStocks,
 		availableForSelection,
 		selectedStockForWatchlist,
 		setSelectedStockForWatchlist,
