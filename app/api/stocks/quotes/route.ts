@@ -7,7 +7,16 @@ import {
 	rateLimitConfigs,
 } from "@/lib/rate-limiter";
 
+// Get Angel One configuration from server environment
 const DEFAULT_API_URL = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/";
+const apiUrl = process.env.ANGELONE_API_URL ?? DEFAULT_API_URL;
+const apiKey = process.env.ANGELONE_API_KEY;
+const authToken = process.env.ANGELONE_AUTH_TOKEN;
+const clientLocalIp = process.env.ANGELONE_CLIENT_LOCAL_IP;
+const clientPublicIp = process.env.ANGELONE_CLIENT_PUBLIC_IP;
+const macAddress = process.env.ANGELONE_MAC_ADDRESS;
+const sourceId = process.env.ANGELONE_SOURCE_ID ?? "WEB";
+const userType = process.env.ANGELONE_USER_TYPE ?? "USER";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -21,16 +30,6 @@ export async function POST(request: NextRequest) {
 		if (!rateLimit.allowed) {
 			return createRateLimitResponse(rateLimit);
 		}
-
-		// Get Angel One configuration from server environment
-		const apiUrl = process.env.ANGELONE_API_URL ?? DEFAULT_API_URL;
-		const apiKey = process.env.ANGELONE_API_KEY;
-		const authToken = process.env.ANGELONE_AUTH_TOKEN;
-		const clientLocalIp = process.env.ANGELONE_CLIENT_LOCAL_IP;
-		const clientPublicIp = process.env.ANGELONE_CLIENT_PUBLIC_IP;
-		const macAddress = process.env.ANGELONE_MAC_ADDRESS;
-		const sourceId = process.env.ANGELONE_SOURCE_ID ?? "WEB";
-		const userType = process.env.ANGELONE_USER_TYPE ?? "USER";
 
 		// Check if Angel One is properly configured
 		if (!apiKey || !authToken || !clientLocalIp || !clientPublicIp || !macAddress) {
