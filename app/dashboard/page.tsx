@@ -168,10 +168,7 @@ export default function DashboardPage() {
 				</section>
 
 				{/* Right Sidebar - MoneyIQ Pulse + Fast Glance */}
-				<Sidebar
-					watchlistStocks={watchlistStocks}
-					setShowWatchlistDialog={setShowWatchlistDialog}
-				/>
+				<Sidebar />
 			</main>
 
 			{/* Watchlist Dialog */}
