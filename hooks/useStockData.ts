@@ -35,7 +35,7 @@ const mapScripToLiveStock = (stock: scripMasterStocks): LiveStock => {
 	};
 };
 
-export const useStockData = (currentPage: number, pageSize = 6) => {
+export const useStockData = (currentPage: number, pageSize = 6, searchQuery = "") => {
 	const [stocks, setStocks] = useState<LiveStock[]>([]);
 	const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 	const [totalPages, setTotalPages] = useState(1);
@@ -43,10 +43,20 @@ export const useStockData = (currentPage: number, pageSize = 6) => {
 	useEffect(() => {
 		let mounted = true;
 		const apiPage = Math.max(currentPage - 1, 0);
+		const normalizedQuery = searchQuery.trim();
 
 		const fetchStocks = async () => {
 			try {
-				const response = await fetch(`/api/stocks/list?limit=${pageSize}&page=${apiPage}`, {
+				const params = new URLSearchParams({
+					limit: String(pageSize),
+					page: String(apiPage),
+				});
+
+				if (normalizedQuery) {
+					params.set("q", normalizedQuery);
+				}
+
+				const response = await fetch(`/api/stocks/list?${params.toString()}`, {
 					cache: "no-store",
 				});
 				if (!response.ok) {
@@ -71,7 +81,7 @@ export const useStockData = (currentPage: number, pageSize = 6) => {
 		return () => {
 			mounted = false;
 		};
-	}, [currentPage, pageSize]);
+	}, [currentPage, pageSize, searchQuery]);
 
 	// Handle real-time stock updates from WebSocket
 	const handleStockUpdate = (update: StockUpdate[]) => {

@@ -55,6 +55,8 @@ const parseNumberParam = (value: string | null, fallback: number) => {
 	return Math.floor(parsed);
 };
 
+const parseSearchQuery = (value: string | null) => value?.trim().toLowerCase() || "";
+
 export async function GET(request: NextRequest) {
 	try {
 		await refreshStocksIfNeeded();
@@ -63,17 +65,22 @@ export async function GET(request: NextRequest) {
 		const requestedLimit = parseNumberParam(searchParams.get("limit"), 100);
 		const limit = Math.min(Math.max(requestedLimit, 1), 500);
 		const page = parseNumberParam(searchParams.get("page"), 0);
-		const total = availableStocks.length;
+		const searchQuery = parseSearchQuery(searchParams.get("q"));
+		const filteredStocks = searchQuery
+			? availableStocks.filter((stock) => stock.name?.toLowerCase().includes(searchQuery))
+			: availableStocks;
+		const total = filteredStocks.length;
 		const totalPages = Math.max(1, Math.ceil(total / limit));
-		const start = page * limit;
+		const safePage = Math.min(page, Math.max(0, totalPages - 1));
+		const start = safePage * limit;
 
 		return NextResponse.json({
 			status: "success",
-			page,
+			page: safePage,
 			limit,
 			total,
 			totalPages,
-			availableStocks: availableStocks.slice(start, start + limit),
+			availableStocks: filteredStocks.slice(start, start + limit),
 		});
 	} catch (error) {
 		return NextResponse.json(

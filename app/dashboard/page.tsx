@@ -21,6 +21,7 @@ export default function DashboardPage() {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [activeSection, setActiveSection] = useState("stocks"); // Default to stocks
+	const [stockSearchQuery, setStockSearchQuery] = useState("");
 	const [showWatchlistDialog, setShowWatchlistDialog] = useState(false);
 	const [stocksCurrentPage, setStocksCurrentPage] = useState(0);
 	const [ipoCurrentPage, setIpoCurrentPage] = useState(0);
@@ -30,10 +31,9 @@ export default function DashboardPage() {
 	const {
 		stocks,
 		totalPages: stocksTotalPages,
-		lastRefresh,
 		handleStockUpdate,
 		handleHistoricalBatch,
-	} = useStockData(stocksCurrentPage + 1, 6);
+	} = useStockData(stocksCurrentPage + 1, 6, stockSearchQuery);
 
 	const {
 		watchlist,
@@ -54,7 +54,7 @@ export default function DashboardPage() {
 	const paginatedIpos = useMemo(() => ipos, [ipos]);
 
 	// Page-aware WebSocket hook
-	const { status: wsStatus } = usePageAwareWebSocket({
+	usePageAwareWebSocket({
 		activeSection: activeSection as "stocks" | "ipos" | "mutual-funds",
 		paginatedStocks,
 		onHistoricalBatch: handleHistoricalBatch,
@@ -93,30 +93,9 @@ export default function DashboardPage() {
 		setActiveSection(sectionId);
 	}, []);
 
-	const lastRefreshLabel = useMemo(() => {
-		if (!lastRefresh) {
-			return "Loading...";
-		}
-
-		const timeStr = lastRefresh.toLocaleTimeString("en-IN", {
-			hour: "2-digit",
-			minute: "2-digit",
-			second: "2-digit",
-		});
-
-		// Show WebSocket status
-		if (wsStatus === "connected") {
-			return `Live via WebSocket ${timeStr}`;
-		}
-		if (wsStatus === "connecting") {
-			return `Connecting... ${timeStr}`;
-		}
-		if (wsStatus === "error") {
-			return `Connection error ${timeStr}`;
-		}
-
-		return `Updated ${timeStr}`;
-	}, [lastRefresh, wsStatus]);
+	useEffect(() => {
+		setStocksCurrentPage(0);
+	}, [stockSearchQuery]);
 
 	if (isLoading) {
 		return (
@@ -159,9 +138,10 @@ export default function DashboardPage() {
 						<StocksSection
 							paginatedStocks={paginatedStocks}
 							totalPages={stocksTotalPages}
-							lastRefreshLabel={lastRefreshLabel}
 							stocksCurrentPage={stocksCurrentPage}
 							setStocksCurrentPage={setStocksCurrentPage}
+							searchQuery={stockSearchQuery}
+							setSearchQuery={setStockSearchQuery}
 						/>
 					)}
 

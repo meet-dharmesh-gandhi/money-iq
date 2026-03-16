@@ -1,28 +1,60 @@
 import type { LiveStock } from "@/types/dashboard";
+import { useEffect, useState } from "react";
 
 interface StocksSectionProps {
 	paginatedStocks: LiveStock[];
 	totalPages: number;
-	lastRefreshLabel: string;
 	stocksCurrentPage: number;
 	setStocksCurrentPage: (page: number) => void;
+	searchQuery: string;
+	setSearchQuery: (query: string) => void;
 }
 
 export default function StocksSection({
 	paginatedStocks,
 	totalPages,
-	lastRefreshLabel,
 	stocksCurrentPage,
 	setStocksCurrentPage,
+	searchQuery,
+	setSearchQuery,
 }: StocksSectionProps) {
+	const [pageInput, setPageInput] = useState(String(stocksCurrentPage + 1));
+
+	useEffect(() => {
+		setPageInput(String(stocksCurrentPage + 1));
+	}, [stocksCurrentPage]);
+
+	const commitPageInput = (rawValue: string) => {
+		if (!rawValue) {
+			setPageInput(String(stocksCurrentPage + 1));
+			return;
+		}
+
+		const nextPageNumber = Number(rawValue);
+		if (Number.isNaN(nextPageNumber)) {
+			setPageInput(String(stocksCurrentPage + 1));
+			return;
+		}
+
+		const clampedPage = Math.min(totalPages, Math.max(1, nextPageNumber));
+		setStocksCurrentPage(clampedPage - 1);
+		setPageInput(String(clampedPage));
+	};
+
 	return (
 		<section className="space-y-6">
 			<div className="flex items-end justify-between">
 				<div>
 					<h2 className="text-3xl font-bold text-slate-900">Live Stocks</h2>
 				</div>
-				<div className="text-right">
-					<span className="text-xs text-slate-500">{lastRefreshLabel}</span>
+				<div className="w-full max-w-sm">
+					<input
+						type="text"
+						value={searchQuery}
+						onChange={(event) => setSearchQuery(event.target.value)}
+						placeholder="Search stock names"
+						className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+					/>
 				</div>
 			</div>
 
@@ -92,6 +124,12 @@ export default function StocksSection({
 				})}
 			</div>
 
+			{paginatedStocks.length === 0 && (
+				<p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+					No stocks found for this name.
+				</p>
+			)}
+
 			{/* Pagination Controls */}
 			<div className="flex items-center justify-center space-x-4">
 				<button
@@ -101,9 +139,26 @@ export default function StocksSection({
 				>
 					Previous
 				</button>
-				<span className="text-sm text-slate-600">
-					Page {stocksCurrentPage + 1} of {totalPages}
-				</span>
+				<div className="flex items-center gap-2 text-sm text-slate-600">
+					<span>Page</span>
+					<input
+						type="text"
+						inputMode="numeric"
+						value={pageInput}
+						onChange={(event) => {
+							const digitsOnly = event.target.value.replace(/\D/g, "");
+							setPageInput(digitsOnly);
+						}}
+						onKeyDown={(event) => {
+							if (event.key === "Enter") {
+								commitPageInput(pageInput);
+							}
+						}}
+						onBlur={() => commitPageInput(pageInput)}
+						className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1 text-center text-sm text-slate-700 outline-none transition focus:border-slate-400"
+					/>
+					<span>of {totalPages}</span>
+				</div>
 				<button
 					onClick={() =>
 						setStocksCurrentPage(Math.min(totalPages - 1, stocksCurrentPage + 1))
