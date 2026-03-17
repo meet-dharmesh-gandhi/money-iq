@@ -26,6 +26,7 @@ export default function DashboardPage() {
 	const [stocksCurrentPage, setStocksCurrentPage] = useState(0);
 	const [ipoCurrentPage, setIpoCurrentPage] = useState(0);
 	const [mfCurrentPage, setMfCurrentPage] = useState(0);
+	const [mfSearchQuery, setMfSearchQuery] = useState("");
 
 	// Custom hooks
 	const {
@@ -107,6 +108,10 @@ export default function DashboardPage() {
 		setIpoCurrentPage(0);
 	}, [ipoFilter]);
 
+	useEffect(() => {
+		setMfCurrentPage(0);
+	}, [mfSearchQuery]);
+
 	if (isLoading) {
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -175,6 +180,8 @@ export default function DashboardPage() {
 							loadMutualFunds={loadMutualFunds}
 							mfCurrentPage={mfCurrentPage}
 							setMfCurrentPage={setMfCurrentPage}
+							searchQuery={mfSearchQuery}
+							setSearchQuery={setMfSearchQuery}
 						/>
 					)}
 				</section>
