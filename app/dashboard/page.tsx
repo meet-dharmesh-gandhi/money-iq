@@ -7,6 +7,7 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import StocksSection from "@/components/dashboard/StocksSection";
 import TabNavigation from "@/components/dashboard/TabNavigation";
 import DashboardViewSwitch from "@/components/dashboard/DashboardViewSwitch";
+import AdminTipsManager from "@/components/dashboard/AdminTipsManager";
 import WatchlistManager from "@/components/dashboard/WatchlistManager";
 import { useIPOData } from "../../hooks/useIPOData";
 import { useMutualFunds } from "@/hooks/useMutualFunds";
@@ -125,6 +126,8 @@ export default function DashboardPage() {
 		return null;
 	}
 
+	const isAdmin = user.role === "admin";
+
 	return (
 		<div className="min-h-screen bg-slate-50">
 			<Navbar
@@ -144,55 +147,67 @@ export default function DashboardPage() {
 				]}
 			/>
 
-			<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:flex-row">
-				{/* Main Content Area */}
-				<section className="flex-1 space-y-8">
-					<DashboardViewSwitch activeView="market-info" />
+			{isAdmin ? (
+				<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:flex-row">
+					<section className="flex-1 space-y-8">
+						<DashboardViewSwitch activeView="market-info" />
+						<AdminTipsManager />
+					</section>
+				</main>
+			) : (
+				<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:flex-row">
+					{/* Main Content Area */}
+					<section className="flex-1 space-y-8">
+						<DashboardViewSwitch activeView="market-info" />
 
-					{/* Horizontal Navigation Tabs */}
-					<TabNavigation activeSection={activeSection} switchSection={switchSection} />
-
-					{/* Active Section Content */}
-					{activeSection === "stocks" && (
-						<StocksSection
-							paginatedStocks={paginatedStocks}
-							totalPages={stocksTotalPages}
-							stocksCurrentPage={stocksCurrentPage}
-							setStocksCurrentPage={setStocksCurrentPage}
-							searchQuery={stockSearchQuery}
-							setSearchQuery={setStockSearchQuery}
+						{/* Horizontal Navigation Tabs */}
+						<TabNavigation
+							activeSection={activeSection}
+							switchSection={switchSection}
 						/>
-					)}
 
-					{activeSection === "ipos" && (
-						<IpoSection
-							paginatedIpos={paginatedIpos}
-							totalPages={iposTotalPages}
-							ipoCurrentPage={ipoCurrentPage}
-							setIpoCurrentPage={setIpoCurrentPage}
-							filter={ipoFilter}
-							setFilter={setIpoFilter}
-						/>
-					)}
+						{/* Active Section Content */}
+						{activeSection === "stocks" && (
+							<StocksSection
+								paginatedStocks={paginatedStocks}
+								totalPages={stocksTotalPages}
+								stocksCurrentPage={stocksCurrentPage}
+								setStocksCurrentPage={setStocksCurrentPage}
+								searchQuery={stockSearchQuery}
+								setSearchQuery={setStockSearchQuery}
+							/>
+						)}
 
-					{activeSection === "mutual-funds" && (
-						<MutualFundsSection
-							mutualFunds={mutualFunds}
-							mfLoading={mfLoading}
-							mfHasMore={mfHasMore}
-							mfOffset={mfOffset}
-							loadMutualFunds={loadMutualFunds}
-							mfCurrentPage={mfCurrentPage}
-							setMfCurrentPage={setMfCurrentPage}
-							searchQuery={mfSearchQuery}
-							setSearchQuery={setMfSearchQuery}
-						/>
-					)}
-				</section>
+						{activeSection === "ipos" && (
+							<IpoSection
+								paginatedIpos={paginatedIpos}
+								totalPages={iposTotalPages}
+								ipoCurrentPage={ipoCurrentPage}
+								setIpoCurrentPage={setIpoCurrentPage}
+								filter={ipoFilter}
+								setFilter={setIpoFilter}
+							/>
+						)}
 
-				{/* Right Sidebar - MoneyIQ Pulse + Fast Glance */}
-				<Sidebar />
-			</main>
+						{activeSection === "mutual-funds" && (
+							<MutualFundsSection
+								mutualFunds={mutualFunds}
+								mfLoading={mfLoading}
+								mfHasMore={mfHasMore}
+								mfOffset={mfOffset}
+								loadMutualFunds={loadMutualFunds}
+								mfCurrentPage={mfCurrentPage}
+								setMfCurrentPage={setMfCurrentPage}
+								searchQuery={mfSearchQuery}
+								setSearchQuery={setMfSearchQuery}
+							/>
+						)}
+					</section>
+
+					{/* Right Sidebar - MoneyIQ Pulse + Fast Glance */}
+					<Sidebar />
+				</main>
+			)}
 
 			{/* Watchlist Dialog */}
 			<WatchlistManager
