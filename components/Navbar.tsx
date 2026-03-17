@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type BaseAction = {
 	id?: string;
@@ -40,6 +41,7 @@ type NavbarProps = {
 	brandLabel?: string;
 	brandIcon?: ReactNode;
 	className?: string;
+	autoProfileLink?: boolean;
 };
 
 const headerVariants: Record<Required<NavbarProps>["variant"], string> = {
@@ -60,8 +62,49 @@ export default function Navbar({
 	brandLabel = "MoneyIQ",
 	brandIcon,
 	className = "",
+	autoProfileLink = true,
 }: NavbarProps) {
+	const [authUsername, setAuthUsername] = useState<string | null>(null);
 	const headerClassName = `${headerVariants[variant]} ${className}`.trim();
+
+	useEffect(() => {
+		if (!autoProfileLink || typeof window === "undefined") {
+			return;
+		}
+
+		try {
+			const stored = localStorage.getItem("authUser");
+			if (!stored) {
+				setAuthUsername(null);
+				return;
+			}
+
+			const parsed = JSON.parse(stored) as { username?: string };
+			setAuthUsername(parsed.username ?? null);
+		} catch {
+			setAuthUsername(null);
+		}
+	}, [autoProfileLink]);
+
+	const hasProfileAction = actions.some(
+		(action) => action.type === "link" && action.href === "/profile",
+	);
+
+	const resolvedActions = useMemo(() => {
+		if (!autoProfileLink || !authUsername || hasProfileAction) {
+			return actions;
+		}
+
+		return [
+			...actions,
+			{
+				type: "link" as const,
+				label: authUsername,
+				href: "/profile",
+				className: "text-sm text-slate-700",
+			},
+		];
+	}, [actions, authUsername, autoProfileLink, hasProfileAction]);
 
 	const renderAction = (action: NavbarAction, index: number) => {
 		switch (action.type) {
@@ -119,7 +162,7 @@ export default function Navbar({
 						{brandLabel}
 					</span>
 				</Link>
-				<div className="flex items-center gap-3">{actions.map(renderAction)}</div>
+				<div className="flex items-center gap-3">{resolvedActions.map(renderAction)}</div>
 			</nav>
 		</header>
 	);

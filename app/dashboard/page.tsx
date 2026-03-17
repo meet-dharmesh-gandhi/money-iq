@@ -130,8 +130,9 @@ export default function DashboardPage() {
 				variant="solid"
 				actions={[
 					{
-						type: "label",
+						type: "link",
 						label: `Welcome, ${user.username}`,
+						href: "/profile",
 						className: "text-sm text-slate-600",
 					},
 					{
