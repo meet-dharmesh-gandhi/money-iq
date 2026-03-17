@@ -13,16 +13,22 @@ export type WebSocketMessageType =
 	| "HISTORICAL_BATCH";
 
 export interface WebSocketSubscription {
+	mode?: "stocks" | "ipos" | "mutual-funds";
 	section?: "stocks" | "ipos" | "mutual-funds";
 	symbols?: string[];
 	ipoIds?: string[];
+	subscriptions?: string[];
 }
 
 export interface WebSocketMessage {
 	type: WebSocketMessageType;
 	subscription?: WebSocketSubscription;
+	mode?: "stocks" | "ipos" | "mutual-funds";
+	section?: "stocks" | "ipos" | "mutual-funds";
 	symbols?: string[];
-	data?: any;
+	ipoIds?: string[];
+	subscriptions?: string[];
+	data?: unknown;
 	timestamp: number;
 }
 
@@ -39,6 +45,12 @@ export interface StockUpdate {
 
 export interface IpoUpdate {
 	id: string;
+	name: string;
+	stage: "Open" | "Upcoming" | "Listing";
+	sourceTag: "Current" | "Upcoming";
+	priceBand: string;
+	closesOn: string;
+	lotSize: number;
 	subscription: number;
 	timestamp: number;
 }

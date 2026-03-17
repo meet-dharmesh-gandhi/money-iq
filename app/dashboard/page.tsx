@@ -7,7 +7,7 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import StocksSection from "@/components/dashboard/StocksSection";
 import TabNavigation from "@/components/dashboard/TabNavigation";
 import WatchlistManager from "@/components/dashboard/WatchlistManager";
-import { useIPOData } from "@/hooks/useIPOData";
+import { useIPOData } from "../../hooks/useIPOData";
 import { useMutualFunds } from "@/hooks/useMutualFunds";
 import { usePageAwareWebSocket } from "@/hooks/usePageAwareWebSocket";
 import { useStockData } from "@/hooks/useStockData";
@@ -45,7 +45,13 @@ export default function DashboardPage() {
 		addToWatchlist,
 		removeFromWatchlist,
 	} = useWatchlist(stocks);
-	const { ipos, totalPages: iposTotalPages, handleIpoUpdate } = useIPOData(ipoCurrentPage + 1, 6);
+	const {
+		ipos,
+		totalPages: iposTotalPages,
+		handleIpoUpdate,
+		filter: ipoFilter,
+		setFilter: setIpoFilter,
+	} = useIPOData(ipoCurrentPage + 1, 6);
 
 	const { mutualFunds, mfLoading, mfOffset, mfHasMore, loadMutualFunds } = useMutualFunds();
 
@@ -96,6 +102,10 @@ export default function DashboardPage() {
 	useEffect(() => {
 		setStocksCurrentPage(0);
 	}, [stockSearchQuery]);
+
+	useEffect(() => {
+		setIpoCurrentPage(0);
+	}, [ipoFilter]);
 
 	if (isLoading) {
 		return (
@@ -151,6 +161,8 @@ export default function DashboardPage() {
 							totalPages={iposTotalPages}
 							ipoCurrentPage={ipoCurrentPage}
 							setIpoCurrentPage={setIpoCurrentPage}
+							filter={ipoFilter}
+							setFilter={setIpoFilter}
 						/>
 					)}
 

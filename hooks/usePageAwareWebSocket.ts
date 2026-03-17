@@ -8,6 +8,8 @@ import type {
 	WebSocketSubscription,
 } from "@/types/websocket";
 
+const ALL_IPOS_TOKEN = "__ALL_IPOS__";
+
 interface UsePageAwareWebSocketProps {
 	activeSection: "stocks" | "ipos" | "mutual-funds";
 
@@ -18,7 +20,7 @@ interface UsePageAwareWebSocketProps {
 
 	// For IPOs section
 	paginatedIpos?: IpoSummary[];
-	onIpoUpdate?: (update: IpoUpdate) => void;
+	onIpoUpdate?: (update: IpoUpdate[]) => void;
 
 	// Error handling
 	onError?: (error: Error) => void;
@@ -45,26 +47,32 @@ export const usePageAwareWebSocket = ({
 		switch (activeSection) {
 			case "stocks":
 				if (paginatedStocks && paginatedStocks.length > 0) {
+					const symbols = paginatedStocks.map((stock) => stock.symbol);
 					return {
+						mode: "stocks",
 						section: "stocks",
-						symbols: paginatedStocks.map((stock) => stock.symbol),
+						symbols,
+						subscriptions: symbols,
 					};
 				}
 				break;
 
 			case "ipos":
-				if (paginatedIpos && paginatedIpos.length > 0) {
-					return {
-						section: "ipos",
-						ipoIds: paginatedIpos.map((ipo) => ipo.name), // Using name as ID for now
-					};
-				}
+				const ipoIds = (paginatedIpos || []).map((ipo) => ipo.id || ipo.name);
+				return {
+					mode: "ipos",
+					section: "ipos",
+					ipoIds: ipoIds.length > 0 ? ipoIds : [ALL_IPOS_TOKEN],
+					subscriptions: ipoIds.length > 0 ? ipoIds : [ALL_IPOS_TOKEN],
+				};
 				break;
 
 			case "mutual-funds":
 				// Just keepalive, no real subscription needed
 				return {
+					mode: "mutual-funds",
 					section: "mutual-funds",
+					subscriptions: [],
 				};
 		}
 
@@ -98,7 +106,7 @@ export const usePageAwareWebSocket = ({
 			case "stocks":
 				return paginatedStocks?.map((s) => s.symbol) || [];
 			case "ipos":
-				return paginatedIpos?.map((i) => i.name) || [];
+				return paginatedIpos?.map((i) => i.id || i.name) || [];
 			default:
 				return [];
 		}

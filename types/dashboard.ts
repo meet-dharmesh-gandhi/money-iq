@@ -7,8 +7,10 @@ export type LiveStock = {
 };
 
 export type IpoSummary = {
+	id?: string;
 	name: string;
 	stage: "Open" | "Upcoming" | "Listing";
+	sourceTag?: "Current" | "Upcoming";
 	priceBand: string;
 	subscription: number;
 	closesOn: string;

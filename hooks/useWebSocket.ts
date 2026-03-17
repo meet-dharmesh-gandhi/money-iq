@@ -10,10 +10,20 @@ import type {
 
 interface UseWebSocketOptions {
 	onStockUpdate?: (update: StockUpdate[]) => void;
-	onIpoUpdate?: (update: IpoUpdate) => void;
+	onIpoUpdate?: (update: IpoUpdate[]) => void;
 	onHistoricalBatch?: (batch: HistoricalBatch) => void;
 	onError?: (error: Error) => void;
 }
+
+const buildSubscribeMessage = (subscription: WebSocketSubscription) => ({
+	type: "SUBSCRIBE",
+	mode: subscription.mode || subscription.section,
+	section: subscription.section,
+	subscriptions: Array.from(subscription.subscriptions || []),
+	symbols: Array.from(subscription.symbols || []),
+	ipoIds: Array.from(subscription.ipoIds || []),
+	timestamp: Date.now(),
+});
 
 export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 	const [status, setStatus] = useState<WebSocketStatus>("disconnected");
@@ -32,11 +42,11 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 		options.onStockUpdate?.(update);
 	};
 
-	const stableOnIpoUpdate = (update: any) => {
+	const stableOnIpoUpdate = (update: IpoUpdate[]) => {
 		options.onIpoUpdate?.(update);
 	};
 
-	const stableOnHistoricalBatch = (update: any) => {
+	const stableOnHistoricalBatch = (update: HistoricalBatch) => {
 		options.onHistoricalBatch?.(update);
 	};
 
@@ -49,13 +59,29 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
 		// Send subscription to WebSocket server
 		if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-			const message = {
-				type: "SUBSCRIBE",
-				symbols: Array.from(subscription.symbols || []),
-				timestamp: Date.now(),
-			};
+			if (
+				currentSubscription &&
+				currentSubscription.section &&
+				subscription.section &&
+				currentSubscription.section !== subscription.section
+			) {
+				wsRef.current.send(
+					JSON.stringify({
+						type: "UNSUBSCRIBE",
+						timestamp: Date.now(),
+					}),
+				);
+			}
 
-			console.log("📋 Subscribing to symbols:", message.symbols);
+			const message = buildSubscribeMessage(subscription);
+
+			console.log("📋 Subscribing:", {
+				mode: message.mode,
+				section: message.section,
+				subscriptions: message.subscriptions,
+				symbols: message.symbols,
+				ipoIds: message.ipoIds,
+			});
 			wsRef.current.send(JSON.stringify(message));
 		} else {
 			console.warn("⚠️ WebSocket not connected, cannot subscribe");
@@ -104,11 +130,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
 					// Re-subscribe to current subscription if any
 					if (currentSubscription) {
-						const message = {
-							type: "SUBSCRIBE",
-							symbols: Array.from(currentSubscription.symbols || []),
-							timestamp: Date.now(),
-						};
+						const message = buildSubscribeMessage(currentSubscription);
 						wsRef.current?.send(JSON.stringify(message));
 					}
 				};
@@ -152,13 +174,29 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 								break;
 							case "IPO_UPDATE":
 								if (message.data && stableOnIpoUpdate) {
-									stableOnIpoUpdate(message.data);
+									const payload = Array.isArray(message.data)
+										? message.data
+										: [message.data];
+									stableOnIpoUpdate(payload);
 								}
 								break;
 							case "HISTORICAL_BATCH":
 								if (message.data && stableOnHistoricalBatch) {
-									stableOnHistoricalBatch(message.data);
+									if (Array.isArray(message.data)) {
+										message.data.forEach((batch) => {
+											if (
+												batch &&
+												typeof batch === "object" &&
+												"symbol" in batch
+											) {
+												stableOnHistoricalBatch(batch as HistoricalBatch);
+											}
+										});
+									} else {
+										stableOnHistoricalBatch(message.data as HistoricalBatch);
+									}
 								}
+								break;
 							case "PONG":
 								// Keepalive response - connection is healthy
 								break;

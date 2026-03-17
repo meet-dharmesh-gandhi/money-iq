@@ -1,100 +1,80 @@
-import { useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { IpoSummary } from "@/types/dashboard";
 import type { IpoUpdate } from "@/types/websocket";
-import type { scripMasterStocks } from "@/types/stocks/scripMaster";
 
-type StocksListApiResponse = {
-	status: "success" | "error";
-	totalPages: number;
-	availableStocks: scripMasterStocks[];
-};
+export type IpoFilter = "all" | "current" | "upcoming";
 
-const ipoStages: IpoSummary["stage"][] = ["Open", "Upcoming", "Listing"];
-
-const getSeedFromText = (text: string) => {
-	let hash = 0;
-	for (let i = 0; i < text.length; i++) {
-		hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+const sourceTagToFilter = (sourceTag?: IpoSummary["sourceTag"]): IpoFilter => {
+	if (sourceTag === "Current") {
+		return "current";
 	}
-	return hash;
+	if (sourceTag === "Upcoming") {
+		return "upcoming";
+	}
+	return "all";
 };
 
-const mapScripToIpo = (stock: scripMasterStocks, index: number): IpoSummary => {
-	const seed = getSeedFromText(stock.symbol || stock.token || stock.name);
-	const floorPrice = 80 + (seed % 700);
-	const ceilingPrice = floorPrice + 5 + (seed % 45);
-	const lotSize = Math.max(1, Number.parseInt(stock.lotSize, 10) || 10 + (seed % 190));
-	const closesOn = new Date(Date.now() + (index + 2) * 24 * 60 * 60 * 1000);
+const compareIpos = (a: IpoSummary, b: IpoSummary) => {
+	if (a.sourceTag !== b.sourceTag) {
+		return a.sourceTag === "Current" ? -1 : 1;
+	}
 
-	return {
-		name: stock.name || stock.symbol,
-		stage: ipoStages[index % ipoStages.length],
-		priceBand: `Rs. ${floorPrice} - Rs. ${ceilingPrice}`,
-		subscription: 0,
-		closesOn: closesOn.toLocaleDateString("en-IN", {
-			month: "short",
-			day: "2-digit",
-		}),
-		lotSize,
-	};
+	return a.name.localeCompare(b.name);
 };
+
+const mapUpdateToSummary = (update: IpoUpdate): IpoSummary => ({
+	id: update.id,
+	name: update.name,
+	stage: update.stage,
+	sourceTag: update.sourceTag,
+	priceBand: update.priceBand,
+	subscription: update.subscription,
+	closesOn: update.closesOn,
+	lotSize: update.lotSize,
+});
 
 export const useIPOData = (currentPage: number, pageSize = 6) => {
-	const [ipos, setIpos] = useState<IpoSummary[]>([]);
+	const [allIpos, setAllIpos] = useState<IpoSummary[]>([]);
+	const [filter, setFilter] = useState<IpoFilter>("all");
 	const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
-	const [totalPages, setTotalPages] = useState(1);
 
-	useEffect(() => {
-		let mounted = true;
-		const apiPage = Math.max(currentPage - 1, 0);
+	const filteredIpos = useMemo(() => {
+		if (filter === "all") {
+			return allIpos;
+		}
 
-		const fetchIpos = async () => {
-			try {
-				const response = await fetch(`/api/stocks/list?limit=${pageSize}&page=${apiPage}`, {
-					cache: "no-store",
-				});
-				if (!response.ok) {
-					throw new Error(`Failed to load IPO list (${response.status})`);
-				}
+		return allIpos.filter((ipo) => sourceTagToFilter(ipo.sourceTag) === filter);
+	}, [allIpos, filter]);
 
-				const payload = (await response.json()) as StocksListApiResponse;
-				if (!mounted || payload.status !== "success") {
-					return;
-				}
+	const totalPages = useMemo(() => {
+		return Math.max(1, Math.ceil(filteredIpos.length / pageSize));
+	}, [filteredIpos.length, pageSize]);
 
-				setTotalPages(Math.max(1, payload.totalPages || 1));
-				setIpos(payload.availableStocks.map(mapScripToIpo));
-				setLastRefresh(new Date());
-			} catch (error) {
-				console.error("Failed to load IPO list:", error);
-			}
-		};
+	const safePage = useMemo(() => {
+		return Math.min(Math.max(currentPage - 1, 0), Math.max(totalPages - 1, 0));
+	}, [currentPage, totalPages]);
 
-		void fetchIpos();
+	const ipos = useMemo(() => {
+		const start = safePage * pageSize;
+		return filteredIpos.slice(start, start + pageSize);
+	}, [filteredIpos, pageSize, safePage]);
 
-		return () => {
-			mounted = false;
-		};
-	}, [currentPage, pageSize]);
+	const handleIpoUpdate = useCallback((updates: IpoUpdate[]) => {
+		if (!Array.isArray(updates) || updates.length === 0) {
+			return;
+		}
 
-	// Handle real-time IPO subscription updates from WebSocket
-	const handleIpoUpdate = useCallback((update: IpoUpdate) => {
-		setIpos((prevIpos) => {
-			return prevIpos.map((ipo) => {
-				if (ipo.name === update.id) {
-					return {
-						...ipo,
-						subscription: update.subscription,
-					};
-				}
-				return ipo;
-			});
-		});
+		setAllIpos(
+			updates
+				.map(mapUpdateToSummary)
+				.filter((ipo) => ipo.sourceTag === "Current" || ipo.sourceTag === "Upcoming")
+				.sort(compareIpos),
+		);
 		setLastRefresh(new Date());
 	}, []);
 
 	const setIpoList = useCallback((nextIpos: IpoSummary[]) => {
-		setIpos(nextIpos);
+		setAllIpos(nextIpos);
 		setLastRefresh(new Date());
 	}, []);
 
@@ -102,6 +82,8 @@ export const useIPOData = (currentPage: number, pageSize = 6) => {
 		ipos,
 		totalPages,
 		lastRefresh,
+		filter,
+		setFilter,
 		handleIpoUpdate,
 		setIpoList,
 	};
