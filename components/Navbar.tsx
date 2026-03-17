@@ -64,7 +64,7 @@ export default function Navbar({
 	className = "",
 	autoProfileLink = true,
 }: NavbarProps) {
-	const [authUsername, setAuthUsername] = useState<string | null>(null);
+	const [authUser, setAuthUser] = useState<{ username?: string; role?: string } | null>(null);
 	const headerClassName = `${headerVariants[variant]} ${className}`.trim();
 
 	useEffect(() => {
@@ -75,14 +75,14 @@ export default function Navbar({
 		try {
 			const stored = localStorage.getItem("authUser");
 			if (!stored) {
-				setAuthUsername(null);
+				setAuthUser(null);
 				return;
 			}
 
-			const parsed = JSON.parse(stored) as { username?: string };
-			setAuthUsername(parsed.username ?? null);
+			const parsed = JSON.parse(stored) as { username?: string; role?: string };
+			setAuthUser(parsed);
 		} catch {
-			setAuthUsername(null);
+			setAuthUser(null);
 		}
 	}, [autoProfileLink]);
 
@@ -91,7 +91,10 @@ export default function Navbar({
 	);
 
 	const resolvedActions = useMemo(() => {
-		if (!autoProfileLink || !authUsername || hasProfileAction) {
+		const authUsername = authUser?.username ?? null;
+		const isAdmin = authUser?.role === "admin";
+
+		if (!autoProfileLink || !authUsername || hasProfileAction || isAdmin) {
 			return actions;
 		}
 
@@ -104,7 +107,7 @@ export default function Navbar({
 				className: "text-sm text-slate-700",
 			},
 		];
-	}, [actions, authUsername, autoProfileLink, hasProfileAction]);
+	}, [actions, authUser, autoProfileLink, hasProfileAction]);
 
 	const renderAction = (action: NavbarAction, index: number) => {
 		switch (action.type) {

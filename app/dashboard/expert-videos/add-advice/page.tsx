@@ -55,7 +55,7 @@ export default function AddAdvicePage() {
 			<Navbar
 				variant="solid"
 				actions={[
-					{ type: "link", label: `Welcome, ${user.username}`, href: "/profile" },
+					{ type: "label", label: `Welcome, ${user.username}` },
 					{ type: "button", label: "Logout", onClick: handleLogout },
 				]}
 			/>

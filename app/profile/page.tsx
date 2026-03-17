@@ -113,6 +113,19 @@ export default function ProfilePage() {
 				return;
 			}
 
+			const authUserRaw = localStorage.getItem("authUser");
+			if (authUserRaw) {
+				try {
+					const authUser = JSON.parse(authUserRaw) as AuthUser;
+					if (authUser.role === "admin") {
+						router.push("/dashboard");
+						return;
+					}
+				} catch {
+					// Ignore malformed local auth payload
+				}
+			}
+
 			try {
 				const [profileRes, holdingsRes] = await Promise.all([
 					fetch("/api/profile", { headers: getAuthHeaders() }),
@@ -518,12 +531,6 @@ export default function ProfilePage() {
 			<Navbar
 				variant="solid"
 				actions={[
-					{
-						type: "link",
-						label: hydratedUser.username,
-						href: "/profile",
-						className: "text-sm text-slate-700",
-					},
 					{
 						type: "link",
 						label: "Dashboard",

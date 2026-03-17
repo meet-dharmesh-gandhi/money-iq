@@ -134,25 +134,36 @@ export default function ExpertVideosPage() {
 	}
 
 	const isAdmin = user.role === "admin";
+	const navbarActions = isAdmin
+		? [
+				{
+					type: "label" as const,
+					label: `Welcome, ${user.username}`,
+					className: "text-sm text-slate-600",
+				},
+				{
+					type: "button" as const,
+					label: "Logout",
+					onClick: handleLogout,
+				},
+			]
+		: [
+				{
+					type: "link" as const,
+					label: `Welcome, ${user.username}`,
+					href: "/profile",
+					className: "text-sm text-slate-600",
+				},
+				{
+					type: "button" as const,
+					label: "Logout",
+					onClick: handleLogout,
+				},
+			];
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<Navbar
-				variant="solid"
-				actions={[
-					{
-						type: "link",
-						label: `Welcome, ${user.username}`,
-						href: "/profile",
-						className: "text-sm text-slate-600",
-					},
-					{
-						type: "button",
-						label: "Logout",
-						onClick: handleLogout,
-					},
-				]}
-			/>
+			<Navbar variant="solid" actions={navbarActions} />
 
 			<main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
 				<div className="flex flex-wrap items-center justify-between gap-4">
