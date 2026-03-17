@@ -1,7 +1,7 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
-import AdminPlaceholder from "@/components/dashboard/AdminPlaceholder";
+import AdminExpertVideosManager from "@/components/dashboard/AdminExpertVideosManager";
 import DashboardViewSwitch from "@/components/dashboard/DashboardViewSwitch";
 import type { AuthUser } from "@/types/auth";
 import type { ExpertVideoGroup } from "@/types/expert-videos/model";
@@ -157,144 +157,135 @@ export default function ExpertVideosPage() {
 			<main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
 				<div className="flex flex-wrap items-center justify-between gap-4">
 					<DashboardViewSwitch activeView="expert-videos" />
-					<div className="flex items-center gap-3">
-						{isAdmin && (
-							<button
-								type="button"
-								onClick={() => router.push("/dashboard/expert-videos/add-advice")}
-								className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-							>
-								Add advice
-							</button>
-						)}
+					{!isAdmin && (
 						<p className="text-sm text-slate-500">
 							Page {page} of {totalPages}
 						</p>
-					</div>
+					)}
 				</div>
 
-				{isAdmin && (
-					<AdminPlaceholder
-						title="Admin expert videos"
-						description="Admin publishing and moderation controls for expert videos/advice will be added here."
-					/>
-				)}
+				{isAdmin ? (
+					<AdminExpertVideosManager />
+				) : (
+					<>
+						<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+							<h1 className="text-2xl font-semibold">Expert videos</h1>
+							<p className="mt-1 text-sm text-slate-600">
+								Videos are grouped by date and sorted by publish time within each
+								day.
+							</p>
+						</div>
 
-				<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-					<h1 className="text-2xl font-semibold">Expert videos</h1>
-					<p className="mt-1 text-sm text-slate-600">
-						Videos are grouped by date and sorted by publish time within each day.
-					</p>
-				</div>
+						{isPageLoading && (
+							<div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+								Loading videos...
+							</div>
+						)}
 
-				{isPageLoading && (
-					<div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-						Loading videos...
-					</div>
-				)}
+						{error && !isPageLoading && (
+							<div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-sm">
+								{error}
+							</div>
+						)}
 
-				{error && !isPageLoading && (
-					<div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-sm">
-						{error}
-					</div>
-				)}
+						{!isPageLoading && !error && data.groups.length === 0 && (
+							<div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+								No videos found. Add documents to the expert-videos MongoDB
+								collection.
+							</div>
+						)}
 
-				{!isPageLoading && !error && data.groups.length === 0 && (
-					<div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
-						No videos found. Add documents to the expert-videos MongoDB collection.
-					</div>
-				)}
+						{!isPageLoading && !error && data.groups.length > 0 && (
+							<div className="space-y-6">
+								{data.groups.map((group) => (
+									<section
+										key={group.date}
+										className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+									>
+										<h2 className="text-lg font-semibold text-slate-900">
+											{new Date(group.date).toLocaleDateString("en-US", {
+												weekday: "long",
+												year: "numeric",
+												month: "long",
+												day: "numeric",
+											})}
+										</h2>
+										<div className="mt-4 grid gap-4 md:grid-cols-2">
+											{group.items.map((video) => {
+												const safeUrl = getSafeYouTubeUrl(video.videoUrl);
 
-				{!isPageLoading && !error && data.groups.length > 0 && (
-					<div className="space-y-6">
-						{data.groups.map((group) => (
-							<section
-								key={group.date}
-								className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-							>
-								<h2 className="text-lg font-semibold text-slate-900">
-									{new Date(group.date).toLocaleDateString("en-US", {
-										weekday: "long",
-										year: "numeric",
-										month: "long",
-										day: "numeric",
-									})}
-								</h2>
-								<div className="mt-4 grid gap-4 md:grid-cols-2">
-									{group.items.map((video) => {
-										const safeUrl = getSafeYouTubeUrl(video.videoUrl);
-
-										return (
-											<article
-												key={
-													video._id ??
-													`${video.videoUrl}-${video.publishedAt}`
-												}
-												className="rounded-xl border border-slate-200 p-4"
-											>
-												<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-													{new Date(video.publishedAt).toLocaleTimeString(
-														"en-US",
-														{
-															hour: "numeric",
-															minute: "2-digit",
-														},
-													)}
-												</p>
-												<h3 className="mt-2 text-base font-semibold text-slate-900">
-													{video.title}
-												</h3>
-												{video.channelName && (
-													<p className="mt-1 text-sm text-slate-600">
-														{video.channelName}
-													</p>
-												)}
-												{video.description && (
-													<p className="mt-2 text-sm text-slate-600 line-clamp-3">
-														{video.description}
-													</p>
-												)}
-												{safeUrl ? (
-													<Link
-														href={safeUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="mt-3 inline-flex text-sm font-medium text-slate-900 underline"
+												return (
+													<article
+														key={
+															video._id ??
+															`${video.videoUrl}-${video.publishedAt}`
+														}
+														className="rounded-xl border border-slate-200 p-4"
 													>
-														Watch on YouTube
-													</Link>
-												) : (
-													<p className="mt-3 text-sm text-red-600">
-														Invalid YouTube URL
-													</p>
-												)}
-											</article>
-										);
-									})}
-								</div>
-							</section>
-						))}
-					</div>
-				)}
+														<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+															{new Date(
+																video.publishedAt,
+															).toLocaleTimeString("en-US", {
+																hour: "numeric",
+																minute: "2-digit",
+															})}
+														</p>
+														<h3 className="mt-2 text-base font-semibold text-slate-900">
+															{video.title}
+														</h3>
+														{video.channelName && (
+															<p className="mt-1 text-sm text-slate-600">
+																{video.channelName}
+															</p>
+														)}
+														{video.description && (
+															<p className="mt-2 text-sm text-slate-600 line-clamp-3">
+																{video.description}
+															</p>
+														)}
+														{safeUrl ? (
+															<Link
+																href={safeUrl}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="mt-3 inline-flex text-sm font-medium text-slate-900 underline"
+															>
+																Watch on YouTube
+															</Link>
+														) : (
+															<p className="mt-3 text-sm text-red-600">
+																Invalid YouTube URL
+															</p>
+														)}
+													</article>
+												);
+											})}
+										</div>
+									</section>
+								))}
+							</div>
+						)}
 
-				<div className="flex items-center justify-between pt-2">
-					<button
-						type="button"
-						onClick={goToPreviousPage}
-						disabled={page <= 1}
-						className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
-					>
-						Previous
-					</button>
-					<button
-						type="button"
-						onClick={goToNextPage}
-						disabled={page >= totalPages}
-						className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
-					>
-						Next
-					</button>
-				</div>
+						<div className="flex items-center justify-between pt-2">
+							<button
+								type="button"
+								onClick={goToPreviousPage}
+								disabled={page <= 1}
+								className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+							>
+								Previous
+							</button>
+							<button
+								type="button"
+								onClick={goToNextPage}
+								disabled={page >= totalPages}
+								className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+							>
+								Next
+							</button>
+						</div>
+					</>
+				)}
 			</main>
 		</div>
 	);
