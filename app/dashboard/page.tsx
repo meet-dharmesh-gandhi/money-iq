@@ -6,6 +6,7 @@ import MutualFundsSection from "@/components/dashboard/MutualFundsSection";
 import Sidebar from "@/components/dashboard/Sidebar";
 import StocksSection from "@/components/dashboard/StocksSection";
 import TabNavigation from "@/components/dashboard/TabNavigation";
+import DashboardViewSwitch from "@/components/dashboard/DashboardViewSwitch";
 import WatchlistManager from "@/components/dashboard/WatchlistManager";
 import { useIPOData } from "../../hooks/useIPOData";
 import { useMutualFunds } from "@/hooks/useMutualFunds";
@@ -146,6 +147,8 @@ export default function DashboardPage() {
 			<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:flex-row">
 				{/* Main Content Area */}
 				<section className="flex-1 space-y-8">
+					<DashboardViewSwitch activeView="market-info" />
+
 					{/* Horizontal Navigation Tabs */}
 					<TabNavigation activeSection={activeSection} switchSection={switchSection} />
 
