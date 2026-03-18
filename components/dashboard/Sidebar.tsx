@@ -3,11 +3,35 @@
 import { useEffect, useState } from "react";
 
 type ExpertAdviceApiResponse = {
-	advices?: string[];
+	advices?: Array<{
+		advice: string;
+		adviceDate: string;
+	}>;
 };
 
+type AdviceItem = {
+	advice: string;
+	adviceDate?: string;
+};
+
+function formatAdviceTime(adviceDate?: string) {
+	if (!adviceDate) {
+		return "--";
+	}
+
+	const parsed = new Date(adviceDate);
+	if (Number.isNaN(parsed.getTime())) {
+		return "--";
+	}
+
+	return parsed.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+	});
+}
+
 export default function Sidebar() {
-	const [advices, setAdvices] = useState<string[]>([]);
+	const [advices, setAdvices] = useState<AdviceItem[]>([]);
 	const [isLoadingAdvices, setIsLoadingAdvices] = useState(true);
 
 	useEffect(() => {
@@ -25,7 +49,13 @@ export default function Sidebar() {
 
 				const payload = (await response.json()) as ExpertAdviceApiResponse;
 				if (isMounted) {
-					setAdvices(Array.isArray(payload.advices) ? payload.advices : []);
+					const normalized = Array.isArray(payload.advices)
+						? payload.advices.map((item) => ({
+								advice: item.advice,
+								adviceDate: item.adviceDate,
+							}))
+						: [];
+					setAdvices(normalized);
 				}
 			} catch (error) {
 				console.error("Failed to load today advices:", error);
@@ -96,26 +126,34 @@ export default function Sidebar() {
 							</span> */}
 						</a>
 					</div>
-					<div className="flex flex-col gap-2">
+					<div className="flex flex-col gap-3">
 						{isLoadingAdvices && (
-							<p className="text-sm text-slate-500">
+							<p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
 								Loading today&apos;s expert advice...
 							</p>
 						)}
 
 						{!isLoadingAdvices && advices.length === 0 && (
-							<p className="text-sm text-slate-500">
+							<p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
 								No expert advice available for today.
 							</p>
 						)}
 
-						{advices.map((advice, ind) => (
-							<div
+						{advices.map((item, ind) => (
+							<article
 								key={`advice-${ind}`}
-								className="rounded-sm bg-green-200 px-2 py-2 text-slate-900"
+								className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800"
 							>
-								{advice}
-							</div>
+								<div className="mb-2 flex items-center gap-2">
+									<span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-semibold text-white">
+										{ind + 1}
+									</span>
+									<span className="text-[14px] font-semibold uppercase tracking-wide text-slate-500">
+										{formatAdviceTime(item.adviceDate)}
+									</span>
+								</div>
+								<p className="text-sm leading-6 text-slate-800">{item.advice}</p>
+							</article>
 						))}
 					</div>
 				</div>

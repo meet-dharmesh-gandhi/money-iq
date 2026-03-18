@@ -32,6 +32,11 @@ export type ExpertAdviceUserItem = {
 	createdAt: Date;
 };
 
+export type ExpertAdviceTodayItem = {
+	advice: string;
+	adviceDate: Date;
+};
+
 export type ExpertAdviceAdminPage = {
 	todayItems: ExpertAdviceAdminItem[];
 	pastItems: ExpertAdviceAdminItem[];
@@ -40,7 +45,7 @@ export type ExpertAdviceAdminPage = {
 	limit: number;
 };
 
-export async function getTodayExpertAdvices() {
+export async function getTodayExpertAdvices(): Promise<ExpertAdviceTodayItem[]> {
 	await connectToDatabase();
 
 	const { start, end } = getUtcDayRange();
@@ -50,10 +55,10 @@ export async function getTodayExpertAdvices() {
 		isActive: true,
 	})
 		.sort({ createdAt: -1 })
-		.select({ advice: 1, _id: 0 })
-		.lean();
+		.select({ advice: 1, adviceDate: 1, _id: 0 })
+		.lean<ExpertAdviceTodayItem[]>();
 
-	return docs.map((doc) => doc.advice);
+	return docs;
 }
 
 export async function getUserExpertAdvices(): Promise<ExpertAdviceUserItem[]> {
