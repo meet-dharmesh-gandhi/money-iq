@@ -25,6 +25,13 @@ export type ExpertAdviceAdminItem = {
 	isActive: boolean;
 };
 
+export type ExpertAdviceUserItem = {
+	_id: string;
+	advice: string;
+	adviceDate: Date;
+	createdAt: Date;
+};
+
 export type ExpertAdviceAdminPage = {
 	todayItems: ExpertAdviceAdminItem[];
 	pastItems: ExpertAdviceAdminItem[];
@@ -47,6 +54,15 @@ export async function getTodayExpertAdvices() {
 		.lean();
 
 	return docs.map((doc) => doc.advice);
+}
+
+export async function getUserExpertAdvices(): Promise<ExpertAdviceUserItem[]> {
+	await connectToDatabase();
+
+	return ExpertAdvice.find({ isActive: true })
+		.sort({ adviceDate: -1, createdAt: -1 })
+		.select({ _id: 1, advice: 1, adviceDate: 1, createdAt: 1 })
+		.lean<ExpertAdviceUserItem[]>();
 }
 
 export async function getAdminExpertAdvicePage(
