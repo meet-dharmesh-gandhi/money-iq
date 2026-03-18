@@ -19,6 +19,7 @@ type SignupResponse = {
 };
 
 const OTP_LENGTH = 6;
+const GOOGLE_AUTH_PATH = "/api/auth/google/login";
 
 export default function SignupPage() {
 	const router = useRouter();
@@ -223,8 +224,41 @@ export default function SignupPage() {
 								Create your account
 							</h2>
 							<p className="text-sm text-slate-600">
-								Verify your email with a one-time code to keep your account secure.
+								Create an account with email OTP, or continue instantly with Google.
 							</p>
+						</div>
+
+						<Link
+							href={GOOGLE_AUTH_PATH}
+							className="mb-5 inline-flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+						>
+							<svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+								<path
+									d="M21.35 11.1h-9.18v2.98h5.27c-.22 1.42-1.7 4.18-5.27 4.18-3.17 0-5.75-2.62-5.75-5.86s2.58-5.86 5.75-5.86c1.8 0 3 .76 3.69 1.42l2.52-2.43C16.78 3.96 14.7 3 12.17 3 7.38 3 3.5 6.92 3.5 11.77S7.38 20.54 12.17 20.54c6.03 0 8.42-4.24 8.42-6.42 0-.43-.05-.76-.11-1.09z"
+									fill="#4285F4"
+								/>
+								<path
+									d="M6.52 14.13l-.71.54-2.52 1.96A8.75 8.75 0 0012.17 20.54c2.53 0 4.61-.84 6.15-2.29l-2.92-2.27c-.78.55-1.8.94-3.23.94-3.5 0-5.88-2.36-6.64-2.79z"
+									fill="#34A853"
+								/>
+								<path
+									d="M3.29 7.01A8.85 8.85 0 003.5 11.77c0 1.72.49 3.33 1.33 4.66 0 0 3.16-2.45 3.2-2.49-.2-.59-.31-1.22-.31-1.87s.11-1.28.31-1.87L4.82 7.01z"
+									fill="#FBBC05"
+								/>
+								<path
+									d="M12.17 6.38c1.95 0 3.28.85 4.03 1.56l2.94-2.87C16.77 2.9 14.7 2 12.17 2 7.38 2 3.5 5.92 3.5 10.77c0 1.72.49 3.33 1.33 4.66l3.2-2.49c.76-2.3 3.14-5.56 4.14-6.56z"
+									fill="#EA4335"
+								/>
+							</svg>
+							Continue with Google
+						</Link>
+
+						<div className="mb-5 flex items-center gap-3">
+							<div className="h-px flex-1 bg-slate-200" />
+							<span className="text-xs uppercase tracking-wide text-slate-400">
+								or
+							</span>
+							<div className="h-px flex-1 bg-slate-200" />
 						</div>
 
 						<form onSubmit={handleSubmit} className="space-y-6">
