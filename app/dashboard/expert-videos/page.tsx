@@ -6,6 +6,7 @@ import DashboardViewSwitch from "@/components/dashboard/DashboardViewSwitch";
 import type { AuthUser } from "@/types/auth";
 import type { ExpertVideoGroup } from "@/types/expert-videos/model";
 import type { ExpertVideosPageResponse } from "@/types/expert-videos/pagination";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,6 +35,7 @@ export default function ExpertVideosPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isPageLoading, setIsPageLoading] = useState(true);
 	const [page, setPage] = useState(1);
+	const [pageInput, setPageInput] = useState("1");
 	const [error, setError] = useState<string | null>(null);
 	const [data, setData] = useState<ExpertVideosState>({ groups: [], total: 0, limit: 12 });
 
@@ -57,6 +59,10 @@ export default function ExpertVideosPage() {
 	const totalPages = useMemo(() => {
 		return Math.max(1, Math.ceil((data.total || 0) / data.limit));
 	}, [data.limit, data.total]);
+
+	useEffect(() => {
+		setPageInput(String(page));
+	}, [page]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -120,6 +126,26 @@ export default function ExpertVideosPage() {
 	const goToNextPage = useCallback(() => {
 		setPage((prev) => Math.min(totalPages, prev + 1));
 	}, [totalPages]);
+
+	const commitPageInput = useCallback(
+		(rawValue: string) => {
+			if (!rawValue) {
+				setPageInput(String(page));
+				return;
+			}
+
+			const nextPageNumber = Number(rawValue);
+			if (Number.isNaN(nextPageNumber)) {
+				setPageInput(String(page));
+				return;
+			}
+
+			const clampedPage = Math.min(totalPages, Math.max(1, nextPageNumber));
+			setPage(clampedPage);
+			setPageInput(String(clampedPage));
+		},
+		[page, totalPages],
+	);
 
 	if (isLoading) {
 		return (
@@ -241,6 +267,19 @@ export default function ExpertVideosPage() {
 																minute: "2-digit",
 															})}
 														</p>
+														{video.thumbnailUrl && (
+															<Image
+																src={video.thumbnailUrl}
+																alt={
+																	video.title ||
+																	"YouTube thumbnail"
+																}
+																width={640}
+																height={360}
+																className="mt-2 h-36 w-full rounded-lg object-cover"
+																unoptimized
+															/>
+														)}
 														<h3 className="mt-2 text-base font-semibold text-slate-900">
 															{video.title}
 														</h3>
@@ -277,20 +316,40 @@ export default function ExpertVideosPage() {
 							</div>
 						)}
 
-						<div className="flex items-center justify-between pt-2">
+						<div className="flex items-center justify-center space-x-4 pt-2">
 							<button
 								type="button"
 								onClick={goToPreviousPage}
 								disabled={page <= 1}
-								className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+								className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								Previous
 							</button>
+							<div className="flex items-center gap-2 text-sm text-slate-600">
+								<span>Page</span>
+								<input
+									type="text"
+									inputMode="numeric"
+									value={pageInput}
+									onChange={(event) => {
+										const digitsOnly = event.target.value.replace(/\D/g, "");
+										setPageInput(digitsOnly);
+									}}
+									onKeyDown={(event) => {
+										if (event.key === "Enter") {
+											commitPageInput(pageInput);
+										}
+									}}
+									onBlur={() => commitPageInput(pageInput)}
+									className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1 text-center text-sm text-slate-700 outline-none transition focus:border-slate-400"
+								/>
+								<span>of {totalPages}</span>
+							</div>
 							<button
 								type="button"
 								onClick={goToNextPage}
 								disabled={page >= totalPages}
-								className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+								className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								Next
 							</button>
