@@ -18,6 +18,8 @@ type UserAdvicesResponse = {
 	items?: AdviceItem[];
 };
 
+const TIPS_PER_PAGE = 9;
+
 function getAuthToken() {
 	if (typeof window === "undefined") {
 		return null;
@@ -48,11 +50,22 @@ export default function AdvicesPage() {
 	const [tipsLoading, setTipsLoading] = useState(true);
 	const [tipsError, setTipsError] = useState<string | null>(null);
 	const [tips, setTips] = useState<AdviceItem[]>([]);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [pageInput, setPageInput] = useState("1");
 
 	const todayDateKey = useMemo(() => new Date().toISOString().slice(0, 10), []);
+	const safeTotalPages = useMemo(() => {
+		return Math.max(1, Math.ceil(tips.length / TIPS_PER_PAGE));
+	}, [tips.length]);
+
+	const paginatedTips = useMemo(() => {
+		const start = (currentPage - 1) * TIPS_PER_PAGE;
+		const end = start + TIPS_PER_PAGE;
+		return tips.slice(start, end);
+	}, [currentPage, tips]);
 
 	const groupedTipItems = useMemo(() => {
-		const sortedItems = [...tips].sort(
+		const sortedItems = [...paginatedTips].sort(
 			(a, b) => new Date(b.adviceDate).getTime() - new Date(a.adviceDate).getTime(),
 		);
 
@@ -74,7 +87,37 @@ export default function AdvicesPage() {
 					(a, b) => new Date(b.adviceDate).getTime() - new Date(a.adviceDate).getTime(),
 				),
 			}));
-	}, [tips, todayDateKey]);
+	}, [paginatedTips, todayDateKey]);
+
+	useEffect(() => {
+		if (currentPage > safeTotalPages) {
+			setCurrentPage(safeTotalPages);
+		}
+	}, [currentPage, safeTotalPages]);
+
+	useEffect(() => {
+		setPageInput(String(currentPage));
+	}, [currentPage]);
+
+	const commitPageInput = useCallback(
+		(rawValue: string) => {
+			if (!rawValue) {
+				setPageInput(String(currentPage));
+				return;
+			}
+
+			const nextPageNumber = Number(rawValue);
+			if (Number.isNaN(nextPageNumber)) {
+				setPageInput(String(currentPage));
+				return;
+			}
+
+			const clampedPage = Math.min(safeTotalPages, Math.max(1, nextPageNumber));
+			setCurrentPage(clampedPage);
+			setPageInput(String(clampedPage));
+		},
+		[currentPage, safeTotalPages],
+	);
 
 	const fetchAllTips = useCallback(async () => {
 		setTipsLoading(true);
@@ -175,8 +218,13 @@ export default function AdvicesPage() {
 
 			<main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
 				<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-					<div className="mb-4">
+					<div className="mb-4 flex items-center justify-between gap-3">
 						<h1 className="text-2xl font-semibold text-slate-900">All Time Tips</h1>
+						{!tipsLoading && tips.length > 0 && (
+							<p className="text-sm text-slate-500">
+								Page {currentPage} of {safeTotalPages}
+							</p>
+						)}
 					</div>
 					{tipsLoading ? (
 						<p className="text-sm text-slate-500">Loading all tips...</p>
@@ -218,6 +266,56 @@ export default function AdvicesPage() {
 
 							{groupedTipItems.length === 0 && (
 								<p className="text-sm text-slate-500">No tips available.</p>
+							)}
+
+							{tips.length > 0 && (
+								<div className="flex items-center justify-center space-x-4 pt-2">
+									<button
+										type="button"
+										onClick={() =>
+											setCurrentPage((prev) => Math.max(1, prev - 1))
+										}
+										disabled={currentPage <= 1}
+										className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										Previous
+									</button>
+									<div className="flex items-center gap-2 text-sm text-slate-600">
+										<span>Page</span>
+										<input
+											type="text"
+											inputMode="numeric"
+											value={pageInput}
+											onChange={(event) => {
+												const digitsOnly = event.target.value.replace(
+													/\D/g,
+													"",
+												);
+												setPageInput(digitsOnly);
+											}}
+											onKeyDown={(event) => {
+												if (event.key === "Enter") {
+													commitPageInput(pageInput);
+												}
+											}}
+											onBlur={() => commitPageInput(pageInput)}
+											className="w-16 rounded-md border border-slate-300 bg-white px-2 py-1 text-center text-sm text-slate-700 outline-none transition focus:border-slate-400"
+										/>
+										<span>of {safeTotalPages}</span>
+									</div>
+									<button
+										type="button"
+										onClick={() =>
+											setCurrentPage((prev) =>
+												Math.min(safeTotalPages, prev + 1),
+											)
+										}
+										disabled={currentPage >= safeTotalPages}
+										className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										Next
+									</button>
+								</div>
 							)}
 						</div>
 					)}
