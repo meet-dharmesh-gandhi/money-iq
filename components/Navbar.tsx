@@ -45,8 +45,8 @@ type NavbarProps = {
 };
 
 const headerVariants: Record<Required<NavbarProps>["variant"], string> = {
-	frosted: "border-b border-slate-200 bg-white/90 backdrop-blur",
-	solid: "border-b border-slate-200 bg-white",
+	frosted: "border-b border-slate-200 bg-white/90 backdrop-blur sticky top-0",
+	solid: "border-b border-slate-200 bg-white sticky top-0",
 };
 
 const buttonVariants: Record<"primary" | "ghost", string> = {

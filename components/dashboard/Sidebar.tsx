@@ -78,7 +78,7 @@ export default function Sidebar() {
 
 	return (
 		<aside className="lg:w-80">
-			<div className="sticky top-5 space-y-6">
+			<div className="sticky top-30 space-y-6">
 				{/* MoneyIQ Pulse Card */}
 				<div className="rounded-3xl border border-slate-200 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white">
 					<p className="text-sm uppercase tracking-[0.2em] text-white/60">
