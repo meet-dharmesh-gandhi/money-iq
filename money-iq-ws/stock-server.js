@@ -262,14 +262,6 @@ function startWebSocketServer() {
 						break;
 					case "UNSUBSCRIBE":
 						clearClientSubscription(clientData);
-						sendToClient(
-							ws,
-							"UNSUBSCRIBE_ACK",
-							{
-								message: "Unsubscribed from all symbols",
-							},
-							clientId,
-						);
 						break;
 					default:
 						sendToClient(

@@ -1,16 +1,14 @@
 export type WebSocketMessageType =
-	| "SUBSCRIBE"
-	| "UNSUBSCRIBE"
 	| "STOCK_UPDATE"
 	| "IPO_UPDATE"
+	| "HISTORICAL_BATCH"
 	| "CONNECTED"
-	| "PING"
 	| "PONG"
 	| "ERROR"
-	| "SERVER_SHUTDOWN"
-	| "SUBSCRIPTION_ACK"
-	| "SYMBOL_ERROR"
-	| "HISTORICAL_BATCH";
+	| "UNSUBSCRIBE"
+	| "SUBSCRIBE"
+	| "PING"
+	| "SERVER_SHUTDOWN";
 
 export interface WebSocketSubscription {
 	mode?: "stocks" | "ipos" | "mutual-funds";

@@ -15,16 +15,6 @@ interface UseWebSocketOptions {
 	onError?: (error: Error) => void;
 }
 
-const buildSubscribeMessage = (subscription: WebSocketSubscription) => ({
-	type: "SUBSCRIBE",
-	mode: subscription.mode || subscription.section,
-	section: subscription.section,
-	subscriptions: Array.from(subscription.subscriptions || []),
-	symbols: Array.from(subscription.symbols || []),
-	ipoIds: Array.from(subscription.ipoIds || []),
-	timestamp: Date.now(),
-});
-
 export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 	const [status, setStatus] = useState<WebSocketStatus>("disconnected");
 	const [currentSubscription, setCurrentSubscription] = useState<WebSocketSubscription | null>(
@@ -59,21 +49,15 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
 		// Send subscription to WebSocket server
 		if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-			if (
-				currentSubscription &&
-				currentSubscription.section &&
-				subscription.section &&
-				currentSubscription.section !== subscription.section
-			) {
-				wsRef.current.send(
-					JSON.stringify({
-						type: "UNSUBSCRIBE",
-						timestamp: Date.now(),
-					}),
-				);
-			}
-
-			const message = buildSubscribeMessage(subscription);
+			const message = {
+				type: "SUBSCRIBE",
+				mode: subscription.mode || subscription.section,
+				section: subscription.section,
+				subscriptions: Array.from(subscription.subscriptions || []),
+				symbols: Array.from(subscription.symbols || []),
+				ipoIds: Array.from(subscription.ipoIds || []),
+				timestamp: Date.now(),
+			};
 
 			console.log("📋 Subscribing:", {
 				mode: message.mode,
@@ -86,7 +70,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 		} else {
 			console.warn("⚠️ WebSocket not connected, cannot subscribe");
 			if (!triedOnce) {
-				setTimeout(() => subscribe(subscription, true), 1000);
+				setTimeout(() => subscribe(subscription, true), 200);
 			}
 		}
 	};
@@ -130,7 +114,15 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
 					// Re-subscribe to current subscription if any
 					if (currentSubscription) {
-						const message = buildSubscribeMessage(currentSubscription);
+						const message = {
+							type: "SUBSCRIBE",
+							mode: currentSubscription.mode || currentSubscription.section,
+							section: currentSubscription.section,
+							subscriptions: Array.from(currentSubscription.subscriptions || []),
+							symbols: Array.from(currentSubscription.symbols || []),
+							ipoIds: Array.from(currentSubscription.ipoIds || []),
+							timestamp: Date.now(),
+						};
 						wsRef.current?.send(JSON.stringify(message));
 					}
 				};
