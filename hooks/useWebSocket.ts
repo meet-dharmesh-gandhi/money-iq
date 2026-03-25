@@ -160,6 +160,12 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
 						switch (message.type) {
 							case "CONNECTED":
+								subscribe({
+									mode: "stocks",
+									section: "stocks",
+									symbols: ["__ALL_STOCKS__"],
+									subscriptions: ["__ALL_STOCKS__"],
+								});
 								break;
 							case "STOCK_UPDATE":
 								if (message.data && stableOnStockUpdate) {
