@@ -2,7 +2,7 @@ import Navbar from "@/components/Navbar";
 import SipCalculator from "@/components/calculator/SipCalculator";
 
 export const metadata = {
-	title: "Calculators | MoneyIQ",
+	title: "SIP Calculator | MoneyIQ",
 };
 
 export default function CalculatorPage() {
@@ -24,28 +24,23 @@ export default function CalculatorPage() {
 					},
 				]}
 			/>
-			<main className="mx-auto w-full max-w-5xl px-6 py-12">
-				<div className="mb-10 space-y-3 text-center">
-					<h1 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-						Financial Calculators
-					</h1>
-					<p className="text-lg text-slate-600">
-						Plan your investments and achieve your financial goals with precision.
-					</p>
-				</div>
-
-				<div className="mx-auto max-w-fit rounded-full bg-slate-200/60 p-1 mb-12">
-					<div className="flex gap-1">
-						<button className="rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition">
+			<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+				<section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+					<div className="space-y-3">
+						<p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+							Financial Calculator
+						</p>
+						<h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
 							SIP Calculator
-						</button>
-						<button className="rounded-full px-8 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-slate-200/50 hover:text-slate-900 opacity-60 cursor-not-allowed" title="Coming soon">
-							Retirement Calculator
-						</button>
+						</h1>
+						<p className="max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+							Estimate your SIP corpus with monthly contribution, annual return, and
+							time horizon inputs.
+						</p>
 					</div>
-				</div>
+				</section>
 
-				<div className="mx-auto w-full">
+				<div className="w-full">
 					<SipCalculator />
 				</div>
 			</main>
