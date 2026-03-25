@@ -1,224 +1,420 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 
+type InputRowProps = {
+	label: string;
+	value: number;
+	onChange: (value: number) => void;
+	suffix?: string;
+	prefix?: string;
+	min?: number;
+	max?: number;
+	step?: number;
+};
+
+function InputRow({
+	label,
+	value,
+	onChange,
+	suffix,
+	prefix,
+	min,
+	max,
+	step = 0.01,
+}: InputRowProps) {
+	const inputId = `retirement-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+	const [draftValue, setDraftValue] = useState<string>(String(value));
+
+	const commitValue = () => {
+		let parsedValue = Number(draftValue);
+
+		if (Number.isNaN(parsedValue)) {
+			parsedValue = min ?? value;
+		}
+
+		if (typeof min === "number") {
+			parsedValue = Math.max(min, parsedValue);
+		}
+
+		if (typeof max === "number") {
+			parsedValue = Math.min(max, parsedValue);
+		}
+
+		onChange(parsedValue);
+		setDraftValue(String(parsedValue));
+	};
+
+	return (
+		<div className="flex flex-col gap-3 border-b border-slate-100 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+			<label
+				htmlFor={inputId}
+				className="w-full cursor-pointer text-sm font-medium text-slate-700 sm:w-1/2"
+			>
+				{label}
+			</label>
+			<div className="relative w-full sm:w-52">
+				{prefix && (
+					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">
+						{prefix}
+					</span>
+				)}
+				<input
+					id={inputId}
+					type="number"
+					inputMode="decimal"
+					step={step}
+					value={draftValue}
+					onChange={(e) => setDraftValue(e.target.value)}
+					onBlur={commitValue}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") {
+							e.currentTarget.blur();
+						}
+
+						if (e.key === "Escape") {
+							setDraftValue(String(value));
+							e.currentTarget.blur();
+						}
+					}}
+					min={min}
+					max={max}
+					className={`w-full rounded-xl border border-slate-200 bg-white py-2.5 text-slate-900 shadow-sm transition focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-14" : "pr-3"}`}
+				/>
+				{suffix && (
+					<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+						{suffix}
+					</span>
+				)}
+			</div>
+		</div>
+	);
+}
+
 export default function RetirementCalculator() {
-  // Main Settings
-  const [currentAge, setCurrentAge] = useState<number>(35);
-  const [plannedRetirementAge, setPlannedRetirementAge] = useState<number>(67);
-  const [lifeExpectancy, setLifeExpectancy] = useState<number>(85);
-  const [currentIncome, setCurrentIncome] = useState<number>(70000);
+	// Main Settings
+	const [currentAge, setCurrentAge] = useState<number>(35);
+	const [plannedRetirementAge, setPlannedRetirementAge] = useState<number>(67);
+	const [lifeExpectancy, setLifeExpectancy] = useState<number>(85);
+	const [currentIncome, setCurrentIncome] = useState<number>(70000);
 
-  // Assumptions
-  const [incomeIncreaseRate, setIncomeIncreaseRate] = useState<number>(3);
-  const [incomeNeededPercent, setIncomeNeededPercent] = useState<number>(75);
-  const [investmentReturnRate, setInvestmentReturnRate] = useState<number>(6);
-  const [inflationRate, setInflationRate] = useState<number>(3);
+	// Assumptions
+	const [incomeIncreaseRate, setIncomeIncreaseRate] = useState<number>(3);
+	const [incomeNeededPercent, setIncomeNeededPercent] = useState<number>(75);
+	const [investmentReturnRate, setInvestmentReturnRate] = useState<number>(6);
+	const [inflationRate, setInflationRate] = useState<number>(3);
 
-  // Optional
-  const [otherIncomeMonthly, setOtherIncomeMonthly] = useState<number>(0);
-  const [currentSavings, setCurrentSavings] = useState<number>(30000);
-  const [futureSavingsPercent, setFutureSavingsPercent] = useState<number>(10);
+	// Optional
+	const [otherIncomeMonthly, setOtherIncomeMonthly] = useState<number>(0);
+	const [currentSavings, setCurrentSavings] = useState<number>(30000);
+	const [futureSavingsPercent, setFutureSavingsPercent] = useState<number>(10);
 
-  // Results
-  const [balanceAtRetirement, setBalanceAtRetirement] = useState<number>(0);
-  const [ageDepleted, setAgeDepleted] = useState<number | null>(null);
-  const [finalBalance, setFinalBalance] = useState<number>(0);
-  const [firstYearIncomeNeeded, setFirstYearIncomeNeeded] = useState<number>(0);
+	const clamp = (value: number, min: number, max: number) => {
+		return Math.min(max, Math.max(min, value));
+	};
 
-  useEffect(() => {
-    let balance = currentSavings;
-    let salary = currentIncome;
-    const yearsToRetire = Math.max(0, plannedRetirementAge - currentAge);
-    const retirementYears = Math.max(0, lifeExpectancy - plannedRetirementAge);
+	const handleCurrentAgeChange = (value: number) => {
+		const maxAllowedCurrentAge = Math.max(0, plannedRetirementAge - 1);
+		const nextValue = Math.round(value);
+		setCurrentAge(clamp(nextValue, 0, maxAllowedCurrentAge));
+	};
 
-    // Pre-retirement phase
-    for (let i = 0; i < yearsToRetire; i++) {
-      const annualContribution = salary * (futureSavingsPercent / 100);
-      balance = balance * (1 + investmentReturnRate / 100) + annualContribution;
-      salary = salary * (1 + incomeIncreaseRate / 100);
-    }
-    
-    setBalanceAtRetirement(balance);
+	const handlePlannedRetirementAgeChange = (value: number) => {
+		const minAllowedRetirementAge = currentAge + 1;
+		const maxAllowedRetirementAge = Math.max(minAllowedRetirementAge, lifeExpectancy - 1);
+		const nextValue = Math.round(value);
+		setPlannedRetirementAge(clamp(nextValue, minAllowedRetirementAge, maxAllowedRetirementAge));
+	};
 
-    const neededFirstYear = salary * (incomeNeededPercent / 100);
-    setFirstYearIncomeNeeded(neededFirstYear);
-    
-    let incomeNeededToWithdraw = neededFirstYear - (otherIncomeMonthly * 12);
-    if (incomeNeededToWithdraw < 0) incomeNeededToWithdraw = 0;
-    
-    let depletedAge: number | null = null;
-    let isSuccess = true;
+	const handleLifeExpectancyChange = (value: number) => {
+		const minAllowedLifeExpectancy = plannedRetirementAge + 1;
+		const nextValue = Math.round(value);
+		setLifeExpectancy(clamp(nextValue, minAllowedLifeExpectancy, 130));
+	};
 
-    let postRetirementBalance = balance;
+	const { balanceAtRetirement, ageDepleted, finalBalance, firstYearIncomeNeeded } =
+		useMemo(() => {
+			let balance = currentSavings;
+			let salary = currentIncome;
+			const yearsToRetire = Math.max(0, plannedRetirementAge - currentAge);
+			const retirementYears = Math.max(0, lifeExpectancy - plannedRetirementAge);
 
-    // Post-retirement phase
-    for (let i = 0; i < retirementYears; i++) {
-      postRetirementBalance = postRetirementBalance * (1 + investmentReturnRate / 100) - incomeNeededToWithdraw;
-      
-      if (postRetirementBalance <= 0 && isSuccess) {
-        isSuccess = false;
-        depletedAge = plannedRetirementAge + i;
-        postRetirementBalance = 0;
-      }
-      
-      incomeNeededToWithdraw = incomeNeededToWithdraw * (1 + inflationRate / 100);
-    }
+			// Pre-retirement phase
+			for (let i = 0; i < yearsToRetire; i++) {
+				const annualContribution = salary * (futureSavingsPercent / 100);
+				balance = balance * (1 + investmentReturnRate / 100) + annualContribution;
+				salary = salary * (1 + incomeIncreaseRate / 100);
+			}
 
-    setAgeDepleted(depletedAge);
-    setFinalBalance(postRetirementBalance);
+			const neededFirstYear = salary * (incomeNeededPercent / 100);
 
-  }, [
-    currentAge, plannedRetirementAge, lifeExpectancy, currentIncome,
-    incomeIncreaseRate, incomeNeededPercent, investmentReturnRate, inflationRate,
-    otherIncomeMonthly, currentSavings, futureSavingsPercent
-  ]);
+			let incomeNeededToWithdraw = neededFirstYear - otherIncomeMonthly * 12;
+			if (incomeNeededToWithdraw < 0) incomeNeededToWithdraw = 0;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+			let depletedAge: number | null = null;
+			let isSuccess = true;
 
-  const InputRow = ({ label, value, onChange, suffix, prefix, type = "number", min, max }: any) => (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-slate-100 last:border-0 gap-3 hover:bg-slate-50 px-2 -mx-2 rounded-lg transition-colors">
-      <label className="text-sm font-medium text-slate-700 w-full sm:w-1/2 cursor-pointer">{label}</label>
-      <div className="relative w-full sm:w-48 flex items-center">
-        {prefix && <span className="absolute left-3 text-slate-500 text-sm font-medium z-10">{prefix}</span>}
-        <input 
-          type={type} 
-          value={value} 
-          onChange={(e) => onChange(Number(e.target.value))}
-          min={min}
-          max={max}
-          className={`w-full ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-14' : 'pr-3'} py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition text-slate-900 font-semibold shadow-sm`}
-        />
-        {suffix && <span className="absolute right-3 text-slate-400 text-sm font-medium pointer-events-none">{suffix}</span>}
-      </div>
-    </div>
-  );
+			let postRetirementBalance = balance;
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
-      <Navbar
-        actions={[
-          { type: "link", label: "Log in", href: "/login", className: "hidden md:inline-flex" },
-          { type: "link", label: "Get started", href: "/signup", variant: "primary" },
-        ]}
-      />
+			// Post-retirement phase
+			for (let i = 0; i < retirementYears; i++) {
+				postRetirementBalance =
+					postRetirementBalance * (1 + investmentReturnRate / 100) -
+					incomeNeededToWithdraw;
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 md:text-5xl tracking-tight">
-            How much do you need to retire?
-          </h1>
-          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-            This advanced calculator helps you plan the financial aspects of your retirement, giving you an idea of where you stand in terms of savings, your target, and what your retrievals will look like.
-          </p>
-        </div>
+				if (postRetirementBalance <= 0 && isSuccess) {
+					isSuccess = false;
+					depletedAge = plannedRetirementAge + i;
+					postRetirementBalance = 0;
+				}
 
-        <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr] items-start">
-          <div className="space-y-8">
-            
-            {/* Section 1 */}
-            <section className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-sm font-bold shadow-md">1</div>
-                Basic Details
-              </h2>
-              <div className="space-y-1">
-                <InputRow label="Your current age" value={currentAge} onChange={setCurrentAge} />
-                <InputRow label="Your planned retirement age" value={plannedRetirementAge} onChange={setPlannedRetirementAge} />
-                <InputRow label="Your life expectancy" value={lifeExpectancy} onChange={setLifeExpectancy} />
-                <InputRow label="Your current pre-tax income" value={currentIncome} onChange={setCurrentIncome} prefix="$" suffix="/ year" />
-              </div>
-            </section>
+				incomeNeededToWithdraw = incomeNeededToWithdraw * (1 + inflationRate / 100);
+			}
 
-            {/* Section 2 */}
-            <section className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-sm font-bold shadow-md">2</div>
-                Assumptions
-              </h2>
-              <div className="space-y-1">
-                <InputRow label="Your current income increase" value={incomeIncreaseRate} onChange={setIncomeIncreaseRate} suffix="% / yr" />
-                <InputRow label="Income needed after retirement" value={incomeNeededPercent} onChange={setIncomeNeededPercent} suffix="% of inc" />
-                <InputRow label="Average investment return" value={investmentReturnRate} onChange={setInvestmentReturnRate} suffix="% / yr" />
-                <InputRow label="Inflation rate" value={inflationRate} onChange={setInflationRate} suffix="% / yr" />
-              </div>
-            </section>
+			return {
+				balanceAtRetirement: balance,
+				ageDepleted: depletedAge,
+				finalBalance: postRetirementBalance,
+				firstYearIncomeNeeded: neededFirstYear,
+			};
+		}, [
+			currentAge,
+			plannedRetirementAge,
+			lifeExpectancy,
+			currentIncome,
+			incomeIncreaseRate,
+			incomeNeededPercent,
+			investmentReturnRate,
+			inflationRate,
+			otherIncomeMonthly,
+			currentSavings,
+			futureSavingsPercent,
+		]);
 
-            {/* Section 3 */}
-            <section className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-sm font-bold shadow-md">3</div>
-                Optional Details
-              </h2>
-              <div className="space-y-1">
-                <InputRow label="Other income after retirement (Social Security, etc.)" value={otherIncomeMonthly} onChange={setOtherIncomeMonthly} prefix="$" suffix="/ mo" />
-                <InputRow label="Your current retirement savings" value={currentSavings} onChange={setCurrentSavings} prefix="$" />
-                <InputRow label="Future retirement savings" value={futureSavingsPercent} onChange={setFutureSavingsPercent} suffix="% of inc" />
-              </div>
-            </section>
-			
-          </div>
+	const formatCurrency = (value: number) => {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: "USD",
+			maximumFractionDigits: 0,
+		}).format(value);
+	};
 
-          <div className="sticky top-24 bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-3xl shadow-xl text-white flex flex-col gap-8 ring-1 ring-white/10 relative overflow-hidden">
-            {/* Background embellishment */}
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-slate-700/30 rounded-full blur-3xl pointer-events-none"></div>
+	return (
+		<div className="min-h-screen bg-slate-50 text-slate-900">
+			<Navbar
+				actions={[
+					{
+						type: "link",
+						label: "Log in",
+						href: "/login",
+						className: "hidden md:inline-flex",
+					},
+					{ type: "link", label: "Get started", href: "/signup", variant: "primary" },
+				]}
+			/>
 
-            <div className="relative z-10">
-              <h2 className="text-lg font-medium text-slate-300 mb-2">Portfolio at Retirement</h2>
-              <div className="text-5xl font-bold tracking-tight text-white mb-2">
-                {formatCurrency(balanceAtRetirement)}
-              </div>
-              <p className="text-sm text-slate-400">At age {plannedRetirementAge}</p>
-            </div>
+			<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+				<div className="text-center space-y-4">
+					<h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+						How much do you need to retire?
+					</h1>
+					<p className="mx-auto max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
+						This advanced calculator helps you plan the financial aspects of your
+						retirement, giving you an idea of where you stand in terms of savings, your
+						target, and what your retrievals will look like.
+					</p>
+				</div>
 
-            <div className="bg-white/5 rounded-2xl p-6 border border-white/10 space-y-4 relative z-10 backdrop-blur-sm">
-               <div>
-                 <span className="block text-sm text-slate-400 mb-2 uppercase tracking-wide font-semibold">Status Overview</span>
-                 {ageDepleted ? (
-                    <div className="text-red-400 font-semibold text-lg flex items-center gap-2">
-                      <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                      Depletes at age {ageDepleted}
-                    </div>
-                 ) : (
-                    <div className="text-emerald-400 font-semibold text-lg flex items-center gap-2">
-                      <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      Lasts through life expectancy!
-                    </div>
-                 )}
-               </div>
+				<div className="grid items-start gap-8 lg:grid-cols-[1.45fr_1fr]">
+					<div className="space-y-6">
+						{/* Section 1 */}
+						<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+							<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+									1
+								</div>
+								Basic Details
+							</h2>
+							<div className="space-y-1">
+								<InputRow
+									key={`current-age-${currentAge}`}
+									label="Your current age"
+									value={currentAge}
+									onChange={handleCurrentAgeChange}
+									min={0}
+									max={Math.max(0, plannedRetirementAge - 1)}
+									step={1}
+								/>
+								<InputRow
+									key={`planned-retirement-age-${plannedRetirementAge}`}
+									label="Your planned retirement age"
+									value={plannedRetirementAge}
+									onChange={handlePlannedRetirementAgeChange}
+									min={currentAge + 1}
+									max={Math.max(currentAge + 1, lifeExpectancy - 1)}
+									step={1}
+								/>
+								<InputRow
+									key={`life-expectancy-${lifeExpectancy}`}
+									label="Your life expectancy"
+									value={lifeExpectancy}
+									onChange={handleLifeExpectancyChange}
+									min={plannedRetirementAge + 1}
+									max={130}
+									step={1}
+								/>
+								<InputRow
+									key={`current-income-${currentIncome}`}
+									label="Your current pre-tax income"
+									value={currentIncome}
+									onChange={setCurrentIncome}
+									prefix="$"
+									suffix="/ year"
+									min={0}
+								/>
+							</div>
+						</section>
 
-               <div className="pt-4 border-t border-white/10">
-                 <div className="flex justify-between items-center py-2">
-                   <span className="text-slate-300 text-sm">1st Year Est. Income</span>
-                   <span className="font-semibold text-white">{formatCurrency(firstYearIncomeNeeded)}</span>
-                 </div>
-                 <div className="flex justify-between items-center py-2">
-                   <span className="text-slate-300 text-sm">Final Balance (Age {lifeExpectancy})</span>
-                   <span className={`font-semibold ${finalBalance > 0 ? "text-emerald-400" : "text-slate-400"}`}>
-                     {formatCurrency(finalBalance)}
-                   </span>
-                 </div>
-               </div>
-            </div>
+						{/* Section 2 */}
+						<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+							<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+									2
+								</div>
+								Assumptions
+							</h2>
+							<div className="space-y-1">
+								<InputRow
+									key={`income-increase-rate-${incomeIncreaseRate}`}
+									label="Your current income increase"
+									value={incomeIncreaseRate}
+									onChange={setIncomeIncreaseRate}
+									suffix="% / yr"
+									min={0}
+								/>
+								<InputRow
+									key={`income-needed-percent-${incomeNeededPercent}`}
+									label="Income needed after retirement"
+									value={incomeNeededPercent}
+									onChange={setIncomeNeededPercent}
+									suffix="% of inc"
+									min={0}
+								/>
+								<InputRow
+									key={`investment-return-rate-${investmentReturnRate}`}
+									label="Average investment return"
+									value={investmentReturnRate}
+									onChange={setInvestmentReturnRate}
+									suffix="% / yr"
+								/>
+								<InputRow
+									key={`inflation-rate-${inflationRate}`}
+									label="Inflation rate"
+									value={inflationRate}
+									onChange={setInflationRate}
+									suffix="% / yr"
+									min={0}
+								/>
+							</div>
+						</section>
 
-            <div className="p-5 bg-blue-500/10 rounded-2xl border border-blue-500/20 relative z-10">
-              <p className="text-sm text-blue-200 leading-relaxed">
-                <span className="font-semibold text-blue-300">Analysis: </span> 
-                {ageDepleted ? 
-                  "Your current plan shows a shortfall before life expectancy. Consider increasing savings, delaying retirement, lowering living expenses, or finding additional income sources to bridge the gap." 
-                  : "Excellent! Your plan is on track to support you throughout your expected retirement given your current assumptions."}
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+						{/* Section 3 */}
+						<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+							<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+									3
+								</div>
+								Optional Details
+							</h2>
+							<div className="space-y-1">
+								<InputRow
+									key={`other-income-monthly-${otherIncomeMonthly}`}
+									label="Other income after retirement (Social Security, etc.)"
+									value={otherIncomeMonthly}
+									onChange={setOtherIncomeMonthly}
+									prefix="$"
+									suffix="/ mo"
+									min={0}
+								/>
+								<InputRow
+									key={`current-savings-${currentSavings}`}
+									label="Your current retirement savings"
+									value={currentSavings}
+									onChange={setCurrentSavings}
+									prefix="$"
+									min={0}
+								/>
+								<InputRow
+									key={`future-savings-percent-${futureSavingsPercent}`}
+									label="Future retirement savings"
+									value={futureSavingsPercent}
+									onChange={setFutureSavingsPercent}
+									suffix="% of inc"
+									min={0}
+								/>
+							</div>
+						</section>
+					</div>
+
+					<aside className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+						<div>
+							<h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+								Portfolio at Retirement
+							</h2>
+							<div className="mb-2 text-4xl font-semibold tracking-tight text-slate-900">
+								{formatCurrency(balanceAtRetirement)}
+							</div>
+							<p className="text-sm text-slate-500">At age {plannedRetirementAge}</p>
+						</div>
+
+						<div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
+							<span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+								Status Overview
+							</span>
+							{ageDepleted ? (
+								<p className="text-lg font-semibold text-rose-600">
+									Depletes at age {ageDepleted}
+								</p>
+							) : (
+								<p className="text-lg font-semibold text-emerald-600">
+									Lasts through life expectancy
+								</p>
+							)}
+
+							<div className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+								<div className="flex items-center justify-between py-1.5">
+									<span className="text-sm text-slate-600">
+										1st Year Est. Income
+									</span>
+									<span className="font-semibold text-slate-900">
+										{formatCurrency(firstYearIncomeNeeded)}
+									</span>
+								</div>
+								<div className="flex items-center justify-between py-1.5">
+									<span className="text-sm text-slate-600">
+										Final Balance (Age {lifeExpectancy})
+									</span>
+									<span
+										className={`font-semibold ${finalBalance > 0 ? "text-emerald-700" : "text-slate-500"}`}
+									>
+										{formatCurrency(finalBalance)}
+									</span>
+								</div>
+							</div>
+						</div>
+
+						<div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+							<p className="text-sm leading-6 text-blue-900">
+								<span className="font-semibold">Analysis: </span>
+								{ageDepleted
+									? "Your current plan shows a shortfall before life expectancy. Consider increasing savings, delaying retirement, lowering living expenses, or finding additional income sources to bridge the gap."
+									: "Your plan is on track to support you throughout your expected retirement given your current assumptions."}
+							</p>
+						</div>
+					</aside>
+				</div>
+			</main>
+		</div>
+	);
 }
