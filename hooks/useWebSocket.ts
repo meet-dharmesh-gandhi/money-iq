@@ -53,6 +53,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 				type: "SUBSCRIBE",
 				mode: subscription.mode || subscription.section,
 				section: subscription.section,
+				page: subscription.page,
 				subscriptions: Array.from(subscription.subscriptions || []),
 				symbols: Array.from(subscription.symbols || []),
 				ipoIds: Array.from(subscription.ipoIds || []),
@@ -62,6 +63,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 			console.log("📋 Subscribing:", {
 				mode: message.mode,
 				section: message.section,
+				page: message.page,
 				subscriptions: message.subscriptions,
 				symbols: message.symbols,
 				ipoIds: message.ipoIds,
@@ -118,6 +120,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 							type: "SUBSCRIBE",
 							mode: currentSubscription.mode || currentSubscription.section,
 							section: currentSubscription.section,
+							page: currentSubscription.page,
 							subscriptions: Array.from(currentSubscription.subscriptions || []),
 							symbols: Array.from(currentSubscription.symbols || []),
 							ipoIds: Array.from(currentSubscription.ipoIds || []),

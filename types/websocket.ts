@@ -13,6 +13,7 @@ export type WebSocketMessageType =
 export interface WebSocketSubscription {
 	mode?: "stocks" | "ipos" | "mutual-funds";
 	section?: "stocks" | "ipos" | "mutual-funds";
+	page?: number;
 	symbols?: string[];
 	ipoIds?: string[];
 	subscriptions?: string[];
@@ -23,6 +24,7 @@ export interface WebSocketMessage {
 	subscription?: WebSocketSubscription;
 	mode?: "stocks" | "ipos" | "mutual-funds";
 	section?: "stocks" | "ipos" | "mutual-funds";
+	page?: number;
 	symbols?: string[];
 	ipoIds?: string[];
 	subscriptions?: string[];

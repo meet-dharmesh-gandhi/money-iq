@@ -1,127 +1,104 @@
 import { useState, useCallback, useEffect } from "react";
 import type { LiveStock } from "@/types/dashboard";
 import type { StockUpdate, HistoricalBatch } from "@/types/websocket";
-import type { scripMasterStocks } from "@/types/stocks/scripMaster";
 
-type StocksListApiResponse = {
-	status: "success" | "error";
-	totalPages: number;
-	availableStocks: scripMasterStocks[];
-};
+const toComparableSymbol = (value: string) =>
+	value.toUpperCase().replace(/\s+/g, "").replace(/-EQ$/i, "").replace(/\.NS$/i, "");
 
-const getSeedFromText = (text: string) => {
-	let hash = 0;
-	for (let i = 0; i < text.length; i++) {
-		hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
-	}
-	return hash;
-};
-
-const mapScripToLiveStock = (stock: scripMasterStocks): LiveStock => {
-	const seed = getSeedFromText(stock.symbol || stock.token || stock.name);
-	const basePrice = 100 + (seed % 4900);
-	const percentChange = (seed % 1001) / 100 - 5;
+const createSeedPoints = (ltp: number) => {
+	const basePrice = Number.isFinite(ltp) && ltp > 0 ? ltp : 1;
 	const points = Array.from({ length: 20 }, (_, idx) => {
-		const wave = ((seed >> (idx % 8)) % 15) - 7;
-		return Math.max(1, basePrice + wave * 2 + idx * 0.35);
+		const step = (idx - 19) * 0.0015;
+		return Math.max(1, Number((basePrice * (1 + step)).toFixed(2)));
 	});
+	return points;
+};
+
+const mapUpdateToLiveStock = (stock: StockUpdate): LiveStock => {
+	const ltp = Number.isFinite(stock.ltp) && stock.ltp > 0 ? stock.ltp : 1;
 
 	return {
 		symbol: stock.symbol,
-		company: stock.name || stock.symbol,
-		ltp: Number(basePrice.toFixed(2)),
-		percentChange: Number(percentChange.toFixed(2)),
-		points,
+		company: stock.tradingSymbol || stock.symbol,
+		ltp: Number(ltp.toFixed(2)),
+		percentChange: Number((stock.percentChange ?? 0).toFixed(2)),
+		points: createSeedPoints(ltp),
 	};
 };
 
 export const useStockData = (currentPage: number, pageSize = 6, searchQuery = "") => {
+	const [allStocks, setAllStocks] = useState<LiveStock[]>([]);
 	const [stocks, setStocks] = useState<LiveStock[]>([]);
 	const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 	const [totalPages, setTotalPages] = useState(1);
 
 	useEffect(() => {
-		let mounted = true;
-		const apiPage = Math.max(currentPage - 1, 0);
-		const normalizedQuery = searchQuery.trim();
+		const normalizedQuery = searchQuery.trim().toLowerCase();
+		const filteredStocks = normalizedQuery
+			? allStocks.filter(
+					(stock) =>
+						stock.symbol.toLowerCase().includes(normalizedQuery) ||
+						stock.company.toLowerCase().includes(normalizedQuery),
+				)
+			: allStocks;
 
-		const fetchStocks = async () => {
-			try {
-				const params = new URLSearchParams({
-					limit: String(pageSize),
-					page: String(apiPage),
-				});
+		const computedTotalPages = Math.max(1, Math.ceil(filteredStocks.length / pageSize));
+		const pageIndex = Math.max(0, currentPage - 1);
+		const safePageIndex = Math.min(pageIndex, computedTotalPages - 1);
+		const start = safePageIndex * pageSize;
 
-				if (normalizedQuery) {
-					params.set("q", normalizedQuery);
-				}
-
-				const response = await fetch(`/api/stocks/list?${params.toString()}`, {
-					cache: "no-store",
-				});
-				if (!response.ok) {
-					throw new Error(`Failed to load stocks list (${response.status})`);
-				}
-
-				const payload = (await response.json()) as StocksListApiResponse;
-				if (!mounted || payload.status !== "success") {
-					return;
-				}
-
-				setTotalPages(Math.max(1, payload.totalPages || 1));
-				setStocks(payload.availableStocks.map(mapScripToLiveStock));
-				setLastRefresh(new Date());
-			} catch (error) {
-				console.error("Failed to load stock list:", error);
-			}
-		};
-
-		void fetchStocks();
-
-		return () => {
-			mounted = false;
-		};
-	}, [currentPage, pageSize, searchQuery]);
+		setTotalPages(computedTotalPages);
+		setStocks(filteredStocks.slice(start, start + pageSize));
+	}, [allStocks, currentPage, pageSize, searchQuery]);
 
 	// Handle real-time stock updates from WebSocket
 	const handleStockUpdate = (update: StockUpdate[]) => {
-		console.log("handleStockUpdate Running...");
-		setStocks((prevStocks) => {
-			return prevStocks.map((stock) => {
-				console.log(`map: ${stock.symbol}, ${JSON.stringify(update)}`);
-				const updatedPoint = update.findIndex((ele) => ele.symbol === stock.symbol);
-				if (updatedPoint != -1) {
-					// Update the stock with new price data
-					console.log("point updated");
-					const updatedPoints = [...stock.points.slice(-19), update[updatedPoint].ltp];
-					return {
-						...stock,
-						ltp: update[updatedPoint].ltp,
-						percentChange: update[updatedPoint].percentChange,
-						points: updatedPoints,
-					};
+		setAllStocks((prevStocks) => {
+			const nextStocks = [...prevStocks];
+
+			update.forEach((incoming) => {
+				const incomingKey = toComparableSymbol(incoming.symbol);
+				const index = nextStocks.findIndex(
+					(stock) => toComparableSymbol(stock.symbol) === incomingKey,
+				);
+
+				if (index === -1) {
+					nextStocks.push(mapUpdateToLiveStock(incoming));
+					return;
 				}
-				return stock;
+
+				const current = nextStocks[index];
+				nextStocks[index] = {
+					...current,
+					ltp: incoming.ltp,
+					percentChange: incoming.percentChange,
+					company: current.company || incoming.tradingSymbol || incoming.symbol,
+					points: [...current.points.slice(-19), incoming.ltp],
+				};
 			});
+
+			return nextStocks;
 		});
 		setLastRefresh(new Date());
 	};
 
 	// Handle historical price data batch from WebSocket
 	const handleHistoricalBatch = useCallback((batch: HistoricalBatch) => {
-		setStocks((prevStocks) => {
+		setAllStocks((prevStocks) => {
 			return prevStocks.map((stock) => {
-				if (stock.symbol === batch.symbol && batch.prices.length > 1) {
+				if (toComparableSymbol(stock.symbol) === toComparableSymbol(batch.symbol)) {
 					// Replace points array with historical data for immediate sparkline population
 					return {
 						...stock,
-						points: batch.prices.slice(-20), // Use last 20 points for sparklines
+						points:
+							batch.prices.length > 0
+								? batch.prices.slice(-20)
+								: stock.points,
 					};
 				}
 				return stock;
 			});
 		});
-		console.log(`📈 Historical data loaded for ${batch.symbol}: ${batch.prices.length} points`);
 	}, []);
 
 	return {

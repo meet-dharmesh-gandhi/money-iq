@@ -9,6 +9,7 @@ import type {
 } from "@/types/websocket";
 
 const ALL_IPOS_TOKEN = "__ALL_IPOS__";
+const ALL_STOCKS_TOKEN = "__ALL_STOCKS__";
 
 interface UsePageAwareWebSocketProps {
 	activeSection: "stocks" | "ipos" | "mutual-funds";
@@ -46,16 +47,12 @@ export const usePageAwareWebSocket = ({
 	const requiredSubscription = useMemo((): WebSocketSubscription | null => {
 		switch (activeSection) {
 			case "stocks":
-				if (paginatedStocks && paginatedStocks.length > 0) {
-					const symbols = paginatedStocks.map((stock) => stock.symbol);
-					return {
-						mode: "stocks",
-						section: "stocks",
-						symbols,
-						subscriptions: symbols,
-					};
-				}
-				break;
+				return {
+					mode: "stocks",
+					section: "stocks",
+					symbols: [ALL_STOCKS_TOKEN],
+					subscriptions: [ALL_STOCKS_TOKEN],
+				};
 
 			case "ipos":
 				const ipoIds = (paginatedIpos || []).map((ipo) => ipo.id || ipo.name);
@@ -77,7 +74,7 @@ export const usePageAwareWebSocket = ({
 		}
 
 		return null;
-	}, [activeSection, paginatedStocks, paginatedIpos]);
+	}, [activeSection, paginatedIpos]);
 
 	// Update subscription whenever requirements change
 	useEffect(() => {
@@ -90,6 +87,7 @@ export const usePageAwareWebSocket = ({
 		const subscriptionChanged =
 			!currentSubscription ||
 			currentSubscription.section !== requiredSubscription.section ||
+			currentSubscription.page !== requiredSubscription.page ||
 			JSON.stringify(currentSubscription.symbols) !==
 				JSON.stringify(requiredSubscription.symbols) ||
 			JSON.stringify(currentSubscription.ipoIds) !==
@@ -119,7 +117,7 @@ export const usePageAwareWebSocket = ({
 
 		switch (currentSubscription.section) {
 			case "stocks":
-				return `Stocks: ${currentSubscription.symbols?.join(", ") || "none"}`;
+				return "Stocks: realtime stream";
 			case "ipos":
 				return `IPOs: ${currentSubscription.ipoIds?.join(", ") || "none"}`;
 			case "mutual-funds":

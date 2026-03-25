@@ -12,16 +12,22 @@ const ipoNseProvider = new IpoNseProvider({
 
 const WS_PORT = process.env.WS_PORT || 8080;
 const ALL_IPOS_TOKEN = "__ALL_IPOS__";
+const ALL_STOCKS_TOKEN = "__ALL_STOCKS__";
+const REALTIME_STOCK_API_URL = process.env.REALTIME_STOCK_API_URL;
 
 const clients = new Map();
 const globalStockSubscriptions = {};
 const globalIpoSubscriptions = {};
+const stockPriceHistory = new Map();
 
 let stockUpdateInterval = null;
 let ipoUpdateInterval = null;
+let isStockUpdateInFlight = false;
+let lastRealtimeStockSymbols = [];
 
-const STOCK_UPDATE_FREQUENCY = 1000;
+const STOCK_UPDATE_FREQUENCY = 2000;
 const IPO_UPDATE_FREQUENCY = 5000;
+const STOCKS_PER_FRONTEND_BATCH = 6;
 
 function generateClientId() {
 	return Math.random().toString(36).substring(2, 11);
@@ -74,37 +80,320 @@ function hasActiveIpoSubscriptions() {
 	return Object.keys(globalIpoSubscriptions).length > 0;
 }
 
+function normalizeSymbol(rawStock) {
+	return (
+		rawStock?.identifier ||
+		rawStock?.Identifier ||
+		rawStock?.ScripName ||
+		rawStock?.scripName ||
+		rawStock?.symbol ||
+		rawStock?.Symbol ||
+		rawStock?.tradingSymbol ||
+		rawStock?.tradingsymbol ||
+		rawStock?.ticker ||
+		rawStock?.Ticker ||
+		rawStock?.securityId ||
+		rawStock?.SecurityId ||
+		rawStock?.name ||
+		rawStock?.Name ||
+		null
+	);
+}
+
+function toComparableSymbol(value) {
+	if (!value) {
+		return "";
+	}
+
+	return String(value)
+		.toUpperCase()
+		.replace(/\s+/g, "")
+		.replace(/-EQ$/i, "")
+		.replace(/\.NS$/i, "");
+}
+
+function symbolsMatch(left, right) {
+	const l = toComparableSymbol(left);
+	const r = toComparableSymbol(right);
+
+	if (!l || !r) {
+		return false;
+	}
+
+	return l === r;
+}
+
+function normalizeNumber(value) {
+	if (typeof value === "number" && Number.isFinite(value)) {
+		return value;
+	}
+
+	if (typeof value === "string") {
+		const cleaned = value.replace(/[,%]/g, "").trim();
+		if (!cleaned) {
+			return null;
+		}
+
+		const parsed = Number(cleaned);
+		if (Number.isFinite(parsed)) {
+			return parsed;
+		}
+	}
+
+	return null;
+}
+
+function pushPriceHistory(symbol, ltp) {
+	if (!symbol || !Number.isFinite(ltp)) {
+		return;
+	}
+
+	const current = stockPriceHistory.get(symbol) || [];
+	current.push(ltp);
+
+	if (current.length > 60) {
+		current.splice(0, current.length - 60);
+	}
+
+	stockPriceHistory.set(symbol, current);
+}
+
+function getLatestHistoricalBatch(symbol) {
+	const prices =
+		stockPriceHistory.get(symbol) || fakeDataGenerator.priceHistory.get(symbol) || [];
+	return {
+		symbol,
+		prices,
+		pointCount: prices.length,
+		timestamp: Date.now(),
+	};
+}
+
+function normalizeRealtimeStock(rawStock) {
+	const symbol = normalizeSymbol(rawStock);
+	if (!symbol) {
+		return null;
+	}
+
+	const ltp = normalizeNumber(
+		rawStock?.ltp ??
+			rawStock?.LTP ??
+			rawStock?.lastPrice ??
+			rawStock?.LastPrice ??
+			rawStock?.price ??
+			rawStock?.Price ??
+			rawStock?.close ??
+			rawStock?.Close ??
+			rawStock?.UlaValue,
+	);
+	if (!Number.isFinite(ltp)) {
+		return null;
+	}
+
+	const percentChange = normalizeNumber(
+		rawStock?.percentChange ??
+			rawStock?.PercentChange ??
+			rawStock?.changePercent ??
+			rawStock?.percentageChange ??
+			rawStock?.pChange ??
+			rawStock?.PChange,
+	);
+	const volume = normalizeNumber(
+		rawStock?.volume ??
+			rawStock?.Volume ??
+			rawStock?.totalTradedVolume ??
+			rawStock?.TotalTradedVolume ??
+			rawStock?.tradeVolume ??
+			rawStock?.TradeVolume ??
+			rawStock?.vol,
+	);
+
+	return {
+		symbol,
+		ltp,
+		percentChange: Number.isFinite(percentChange) ? percentChange : 0,
+		volume: Number.isFinite(volume) ? volume : undefined,
+		timestamp: Date.now(),
+		exchange: rawStock?.exchange || rawStock?.Exchange || rawStock?.segment || "NSE",
+		tradingSymbol:
+			rawStock?.tradingSymbol ||
+			rawStock?.tradingsymbol ||
+			rawStock?.ScripName ||
+			rawStock?.scripName ||
+			symbol,
+		symbolToken:
+			rawStock?.symbolToken ||
+			rawStock?.SymbolToken ||
+			rawStock?.identifier ||
+			rawStock?.Identifier ||
+			rawStock?.token ||
+			rawStock?.Token ||
+			rawStock?.securityId ||
+			rawStock?.SecurityId ||
+			rawStock?.Symbol,
+	};
+}
+
+function extractStocksArray(payload) {
+	if (Array.isArray(payload)) {
+		return payload;
+	}
+
+	const candidates = [
+		payload?.data?.data,
+		payload?.data?.stocks,
+		payload?.data?.items,
+		payload?.data?.results,
+		payload?.stocksData,
+		payload?.stocks,
+		payload?.items,
+		payload?.results,
+		payload?.data,
+	];
+
+	for (const candidate of candidates) {
+		if (Array.isArray(candidate)) {
+			return candidate;
+		}
+	}
+
+	return [];
+}
+
+function chunkArray(values, chunkSize) {
+	if (!Array.isArray(values) || values.length === 0) {
+		return [];
+	}
+
+	const chunks = [];
+	for (let index = 0; index < values.length; index += chunkSize) {
+		chunks.push(values.slice(index, index + chunkSize));
+	}
+	return chunks;
+}
+
+async function fetchRealtimeStocks() {
+	if (!REALTIME_STOCK_API_URL) {
+		throw new Error("REALTIME_STOCK_API_URL is required");
+	}
+
+	const requestUrl = new URL(REALTIME_STOCK_API_URL);
+
+	const response = await fetch(requestUrl.toString(), {
+		method: "GET",
+		headers: {
+			Accept: "application/json",
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Stock API request failed with status ${response.status}`);
+	}
+
+	const payload = await response.json();
+
+	const rawStocks = extractStocksArray(payload);
+	if (!Array.isArray(rawStocks) || rawStocks.length === 0) {
+		throw new Error("Stock API payload did not contain a stocks array");
+	}
+
+	const normalizedStocks = rawStocks
+		.map((stock) => normalizeRealtimeStock(stock))
+		.filter(Boolean);
+
+	if (normalizedStocks.length === 0) {
+		throw new Error("Stock API payload did not contain valid stock records");
+	}
+
+	normalizedStocks.forEach((stock) => pushPriceHistory(stock.symbol, stock.ltp));
+	lastRealtimeStockSymbols = normalizedStocks.map((stock) => stock.symbol);
+
+	return {
+		stocks: normalizedStocks,
+	};
+}
+
 function startStockUpdates() {
 	if (stockUpdateInterval) {
 		return;
 	}
 
-	stockUpdateInterval = setInterval(() => {
+	stockUpdateInterval = setInterval(async () => {
+		if (isStockUpdateInFlight) {
+			return;
+		}
+
 		if (!hasActiveStockSubscriptions()) {
 			stopStockUpdates();
 			return;
 		}
 
-		const symbols = Object.keys(globalStockSubscriptions);
-		const fakeDataResult = fakeDataGenerator.generateMultipleSymbolsData(symbols);
-		if (!fakeDataResult.success || fakeDataResult.data.fetched.length === 0) {
-			return;
-		}
+		isStockUpdateInFlight = true;
+		try {
+			const symbols = Object.keys(globalStockSubscriptions);
+			const fallbackSymbols = symbols.filter((symbol) => symbol !== ALL_STOCKS_TOKEN);
+			let latestUpdates = [];
 
-		clients.forEach((clientData, ws) => {
-			if (clientData.mode !== "stocks" || clientData.subscriptions.size === 0) {
+			try {
+				const realtimeResult = await fetchRealtimeStocks();
+				latestUpdates = realtimeResult.stocks;
+			} catch (error) {
+				console.error("Stock API update failed, falling back to fake data:", error.message);
+				const symbolsForFallback =
+					fallbackSymbols.length > 0 ? fallbackSymbols : lastRealtimeStockSymbols;
+				const fakeDataResult = fakeDataGenerator.generateMultipleSymbolsData(
+					symbolsForFallback,
+				);
+				if (fakeDataResult.success && fakeDataResult.data.fetched.length > 0) {
+					latestUpdates = fakeDataResult.data.fetched;
+				}
+			}
+
+			if (latestUpdates.length === 0) {
 				return;
 			}
 
-			const clientSymbols = Array.from(clientData.subscriptions);
-			const relevantData = fakeDataResult.data.fetched.filter((stock) =>
-				clientSymbols.includes(stock.symbol),
-			);
+			const stockChunks = chunkArray(latestUpdates, STOCKS_PER_FRONTEND_BATCH);
 
-			if (relevantData.length > 0) {
-				sendToClient(ws, "STOCK_UPDATE", relevantData, clientData.id);
-			}
-		});
+			clients.forEach((clientData, ws) => {
+				if (clientData.mode !== "stocks" || clientData.subscriptions.size === 0) {
+					return;
+				}
+
+				const subscriptions = clientData.subscriptions;
+				const wantsAllStocks = subscriptions.has(ALL_STOCKS_TOKEN);
+				const clientSymbols = Array.from(subscriptions);
+				stockChunks.forEach((chunk) => {
+					if (wantsAllStocks) {
+						sendToClient(ws, "STOCK_UPDATE", chunk, clientData.id);
+						return;
+					}
+
+					const relevantChunk = chunk
+						.map((stock) => {
+							const matchedClientSymbol = clientSymbols.find((clientSymbol) =>
+								symbolsMatch(clientSymbol, stock.symbol),
+							);
+
+							if (!matchedClientSymbol) {
+								return null;
+							}
+
+							return {
+								...stock,
+								symbol: matchedClientSymbol,
+							};
+						})
+						.filter(Boolean);
+
+					if (relevantChunk.length > 0) {
+						sendToClient(ws, "STOCK_UPDATE", relevantChunk, clientData.id);
+					}
+				});
+			});
+		} finally {
+			isStockUpdateInFlight = false;
+		}
 	}, STOCK_UPDATE_FREQUENCY);
 }
 
@@ -193,6 +482,10 @@ function handleSubscribe(ws, clientData, message) {
 	clearClientSubscription(clientData);
 
 	const nextSubscriptions = Array.from(new Set(rawSubscriptions.filter(Boolean)));
+	if (mode === "stocks" && nextSubscriptions.length === 0) {
+		nextSubscriptions.push(ALL_STOCKS_TOKEN);
+	}
+
 	if (nextSubscriptions.length === 0) {
 		sendToClient(ws, "HISTORICAL_BATCH", [], clientData.id);
 		return;
@@ -210,15 +503,10 @@ function handleSubscribe(ws, clientData, message) {
 	incrementCounters(globalStockSubscriptions, nextSubscriptions);
 	startStockUpdates();
 
-	const fakeDataResult = fakeDataGenerator.generateMultipleSymbolsData(nextSubscriptions);
-	if (fakeDataResult.success && fakeDataResult.data.fetched.length > 0) {
-		const historicalData = nextSubscriptions.map(
-			(symbol) => fakeDataGenerator.priceHistory.get(symbol) ?? [],
-		);
-		sendToClient(ws, "HISTORICAL_BATCH", historicalData, clientData.id);
-	} else {
-		sendToClient(ws, "HISTORICAL_BATCH", [], clientData.id);
-	}
+	const historicalData = nextSubscriptions.includes(ALL_STOCKS_TOKEN)
+		? []
+		: nextSubscriptions.map((symbol) => getLatestHistoricalBatch(symbol));
+	sendToClient(ws, "HISTORICAL_BATCH", historicalData, clientData.id);
 }
 
 function startWebSocketServer() {

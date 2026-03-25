@@ -13,29 +13,8 @@
 ## API Details
 
 This section describes the API for the stock and IPO prices data using the AngelOne SmartAPI
-This involves hitting two APIs:
-
-1. `https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json`
-   This API gives you the symbols supported by AngelOne, needs to be updated just once per day hence it has less overhead
-   The response format is and array of such objects:
-
-```json
-{
-	"token": "99926000",
-	"symbol": "Nifty 50",
-	"name": "NIFTY",
-	"expiry": "",
-	"strike": "0.000000",
-	"lotsize": "1",
-	"instrumenttype": "AMXIDX",
-	"exch_seg": "NSE",
-	"tick_size": "0.000000"
-}
-```
-
-This would be happening in the nextjs server from which it updates the UI
-The UI then sends the request to the websocket for the prices 2. `https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/`
-Getting these prices is then trivial via this second API
+This now uses a single realtime stock API endpoint configured via the `REALTIME_STOCK_API_URL` environment variable.
+The Next.js server fetches this feed and handles internal pagination/search for the UI, while the websocket server streams updates from the same realtime source.
 The sample request is:
 
 ```NodeJS
