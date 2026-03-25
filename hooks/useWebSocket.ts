@@ -160,11 +160,10 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 
 						switch (message.type) {
 							case "CONNECTED":
-								console.log("🎯 WebSocket server ready:", message.data?.message);
 								break;
 							case "STOCK_UPDATE":
 								if (message.data && stableOnStockUpdate) {
-									stableOnStockUpdate(message.data);
+									stableOnStockUpdate(message.data as StockUpdate[]);
 								}
 								break;
 							case "IPO_UPDATE":
@@ -196,10 +195,10 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
 								// Keepalive response - connection is healthy
 								break;
 							case "ERROR":
-								console.error("⚠️ WebSocket server error:", message.data?.message);
-								stableOnError(
-									new Error(message.data?.message || "WebSocket error"),
-								);
+								// console.error("⚠️ WebSocket server error:", message.data?.message);
+								// stableOnError(
+								// 	new Error(message.data?.message || "WebSocket error"),
+								// );
 								break;
 							case "SERVER_SHUTDOWN":
 								console.log("🛑 WebSocket server shutting down");
