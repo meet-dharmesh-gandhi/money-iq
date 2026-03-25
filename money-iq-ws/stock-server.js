@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 require("dotenv").config();
+const http = require("http");
 const { WebSocketServer } = require("ws");
 
 const FakeDataGenerator = require("./src/data/fake-data-generator");
@@ -28,6 +29,12 @@ let lastRealtimeStockSymbols = [];
 const STOCK_UPDATE_FREQUENCY = 2000;
 const IPO_UPDATE_FREQUENCY = 5000;
 const STOCKS_PER_FRONTEND_BATCH = 6;
+const SHUTDOWN_GRACE_PERIOD_MS = Number(process.env.SHUTDOWN_GRACE_PERIOD_MS || 10000);
+
+let isShuttingDown = false;
+let httpServer = null;
+let websocketServer = null;
+const serverStartedAt = Date.now();
 
 function generateClientId() {
 	return Math.random().toString(36).substring(2, 11);
@@ -272,6 +279,38 @@ function chunkArray(values, chunkSize) {
 	return chunks;
 }
 
+function sendJsonResponse(res, statusCode, payload) {
+	res.writeHead(statusCode, {
+		"Content-Type": "application/json",
+		"Cache-Control": "no-store",
+	});
+	res.end(JSON.stringify(payload));
+}
+
+function handleHttpRequest(req, res) {
+	if (!req.url) {
+		sendJsonResponse(res, 400, { error: "Invalid request URL" });
+		return;
+	}
+
+	const requestUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+
+	if (requestUrl.pathname === "/") {
+		sendJsonResponse(res, 200, {
+			message: "MoneyIQ WebSocket server is running",
+		});
+		return;
+	}
+
+	if (requestUrl.pathname === "/live") {
+		sendJsonResponse(res, 200, {
+			message: "OK",
+		});
+	}
+
+	sendJsonResponse(res, 404, { error: "Not Found" });
+}
+
 async function fetchRealtimeStocks() {
 	if (!REALTIME_STOCK_API_URL) {
 		throw new Error("REALTIME_STOCK_API_URL is required");
@@ -509,7 +548,21 @@ function handleSubscribe(ws, clientData, message) {
 }
 
 function startWebSocketServer() {
-	const wss = new WebSocketServer({ port: WS_PORT });
+	httpServer = http.createServer(handleHttpRequest);
+	const wss = new WebSocketServer({ noServer: true });
+	websocketServer = wss;
+
+	httpServer.on("upgrade", (request, socket, head) => {
+		if (isShuttingDown) {
+			socket.write("HTTP/1.1 503 Service Unavailable\r\n\r\n");
+			socket.destroy();
+			return;
+		}
+
+		wss.handleUpgrade(request, socket, head, (ws) => {
+			wss.emit("connection", ws, request);
+		});
+	});
 
 	wss.on("connection", (ws) => {
 		const clientId = generateClientId();
@@ -587,15 +640,23 @@ function startWebSocketServer() {
 		});
 	});
 
-	console.log(
-		`WebSocket server running on ws://localhost:${WS_PORT}, ${process.env.NODE_ENV || "development"}`,
-	);
+	httpServer.listen(WS_PORT, () => {
+		console.log(
+			`WebSocket server running on ws://localhost:${WS_PORT}, ${process.env.NODE_ENV || "development"}`,
+		);
+		console.log(`Health endpoint available at http://localhost:${WS_PORT}/health`);
+	});
 
 	return wss;
 }
 
-process.on("SIGINT", () => {
-	console.log("Stopping the server...");
+async function shutdownServer(signal = "SIGINT") {
+	if (isShuttingDown) {
+		return;
+	}
+
+	isShuttingDown = true;
+	console.log(`Stopping the server (${signal})...`);
 
 	stopStockUpdates();
 	stopIpoUpdates();
@@ -616,8 +677,36 @@ process.on("SIGINT", () => {
 		}
 	});
 
+	await Promise.allSettled([
+		new Promise((resolve) => {
+			if (!websocketServer) {
+				resolve();
+				return;
+			}
+			websocketServer.close(() => resolve());
+		}),
+		new Promise((resolve) => {
+			if (!httpServer) {
+				resolve();
+				return;
+			}
+			httpServer.close(() => resolve());
+		}),
+		new Promise((resolve) => {
+			setTimeout(resolve, SHUTDOWN_GRACE_PERIOD_MS);
+		}),
+	]);
+
 	console.log("Server stopped");
 	process.exit(0);
+}
+
+process.on("SIGINT", () => {
+	shutdownServer("SIGINT");
+});
+
+process.on("SIGTERM", () => {
+	shutdownServer("SIGTERM");
 });
 
 process.on("uncaughtException", (error) => {

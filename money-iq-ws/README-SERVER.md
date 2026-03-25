@@ -65,9 +65,14 @@ Edit `.env` file for your setup:
 ```bash
 # Basic setup (simulation mode)
 WS_PORT=8080
+# Render uses PORT automatically for public traffic
+PORT=8080
 REDIS_ENABLED=true
 ANGEL_ONE_ENABLED=false
 ANGEL_ONE_USE_SIMULATION=true
+
+# Health check / graceful shutdown
+SHUTDOWN_GRACE_PERIOD_MS=10000
 
 # Production setup (with real API)
 ANGEL_ONE_ENABLED=true
@@ -112,6 +117,40 @@ ws.onmessage = (event) => {
 };
 ```
 
+### 5. Health Check Route (HTTP)
+
+The WebSocket server also exposes HTTP health routes on the same port.
+
+```bash
+# Health check route (for cron/uptime monitors)
+curl http://localhost:8080/health
+
+# Alias route with same payload
+curl http://localhost:8080/status
+```
+
+Example response:
+
+```json
+{
+	"status": "healthy",
+	"uptimeMs": 124832,
+	"clients": 3,
+	"stocks": {
+		"activeSymbols": 7,
+		"totalSubscriptions": 14
+	},
+	"ipos": {
+		"activeIpos": 2,
+		"totalSubscriptions": 2
+	},
+	"environment": "development",
+	"timestamp": 1761178043621
+}
+```
+
+During shutdown, this route returns HTTP `503` with `"status": "draining"` so load balancers and monitors know the instance is exiting.
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -120,10 +159,22 @@ ws.onmessage = (event) => {
 
 ```bash
 WS_PORT=8080                    # WebSocket server port
+PORT=8080                       # Platform-provided public port (Render/Heroku)
 WS_HOST=0.0.0.0                 # Server host
 WS_MAX_CLIENTS=1000             # Maximum concurrent connections
 WS_HEARTBEAT_INTERVAL=30000     # Heartbeat interval (ms)
+SHUTDOWN_GRACE_PERIOD_MS=10000  # Max wait for graceful shutdown
 ```
+
+### Render Cron Keepalive
+
+Use Render Cron Job to ping:
+
+```text
+GET https://<your-render-service>.onrender.com/health
+```
+
+Recommended interval: every 5 minutes.
 
 #### Redis Configuration
 
