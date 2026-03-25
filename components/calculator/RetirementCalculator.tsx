@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Navbar from "@/components/Navbar";
 
 type InputRowProps = {
 	label: string;
@@ -193,210 +192,201 @@ export default function RetirementCalculator() {
 		]);
 
 	const formatCurrency = (value: number) => {
-		return new Intl.NumberFormat("en-US", {
+		return new Intl.NumberFormat("en-IN", {
 			style: "currency",
-			currency: "USD",
+			currency: "INR",
 			maximumFractionDigits: 0,
 		}).format(value);
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 text-slate-900">
-			<Navbar
-				actions={[
-					{
-						type: "link",
-						label: "Log in",
-						href: "/login",
-						className: "hidden md:inline-flex",
-					},
-					{ type: "link", label: "Get started", href: "/signup", variant: "primary" },
-				]}
-			/>
+		<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+			<div className="text-center space-y-4">
+				<h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+					How much do you need to retire?
+				</h1>
+				<p className="mx-auto max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
+					This advanced calculator helps you plan the financial aspects of your
+					retirement, giving you an idea of where you stand in terms of savings, your
+					target, and what your retrievals will look like.
+				</p>
+			</div>
 
-			<main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-				<div className="text-center space-y-4">
-					<h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">
-						How much do you need to retire?
-					</h1>
-					<p className="mx-auto max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-						This advanced calculator helps you plan the financial aspects of your
-						retirement, giving you an idea of where you stand in terms of savings, your
-						target, and what your retrievals will look like.
-					</p>
+			<div className="grid items-start gap-8 lg:grid-cols-[1.45fr_1fr]">
+				<div className="space-y-6">
+					{/* Section 1 */}
+					<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+						<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+							<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+								1
+							</div>
+							Basic Details
+						</h2>
+						<div className="space-y-1">
+							<InputRow
+								key={`current-age-${currentAge}`}
+								label="Your current age"
+								value={currentAge}
+								onChange={handleCurrentAgeChange}
+								min={0}
+								max={Math.max(0, plannedRetirementAge - 1)}
+								step={1}
+							/>
+							<InputRow
+								key={`planned-retirement-age-${plannedRetirementAge}`}
+								label="Your planned retirement age"
+								value={plannedRetirementAge}
+								onChange={handlePlannedRetirementAgeChange}
+								min={currentAge + 1}
+								max={Math.max(currentAge + 1, lifeExpectancy - 1)}
+								step={1}
+							/>
+							<InputRow
+								key={`life-expectancy-${lifeExpectancy}`}
+								label="Your life expectancy"
+								value={lifeExpectancy}
+								onChange={handleLifeExpectancyChange}
+								min={plannedRetirementAge + 1}
+								max={130}
+								step={1}
+							/>
+							<InputRow
+								key={`current-income-${currentIncome}`}
+								label="Your current pre-tax income"
+								value={currentIncome}
+								onChange={setCurrentIncome}
+								prefix="₹"
+								suffix="/ year"
+								min={0}
+							/>
+						</div>
+					</section>
+
+					{/* Section 2 */}
+					<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+						<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+							<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+								2
+							</div>
+							Assumptions
+						</h2>
+						<div className="space-y-1">
+							<InputRow
+								key={`income-increase-rate-${incomeIncreaseRate}`}
+								label="Your current income increase"
+								value={incomeIncreaseRate}
+								onChange={setIncomeIncreaseRate}
+								suffix="% / yr"
+								min={0}
+							/>
+							<InputRow
+								key={`income-needed-percent-${incomeNeededPercent}`}
+								label="Income needed after retirement"
+								value={incomeNeededPercent}
+								onChange={setIncomeNeededPercent}
+								suffix="% of inc"
+								min={0}
+							/>
+							<InputRow
+								key={`investment-return-rate-${investmentReturnRate}`}
+								label="Average investment return"
+								value={investmentReturnRate}
+								onChange={setInvestmentReturnRate}
+								suffix="% / yr"
+							/>
+							<InputRow
+								key={`inflation-rate-${inflationRate}`}
+								label="Inflation rate"
+								value={inflationRate}
+								onChange={setInflationRate}
+								suffix="% / yr"
+								min={0}
+							/>
+						</div>
+					</section>
+
+					{/* Section 3 */}
+					<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
+						<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+							<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
+								3
+							</div>
+							Optional Details
+						</h2>
+						<div className="space-y-1">
+							<InputRow
+								key={`other-income-monthly-${otherIncomeMonthly}`}
+								label="Other income after retirement (Social Security, etc.)"
+								value={otherIncomeMonthly}
+								onChange={setOtherIncomeMonthly}
+								prefix="₹"
+								suffix="/ mo"
+								min={0}
+							/>
+							<InputRow
+								key={`current-savings-${currentSavings}`}
+								label="Your current retirement savings"
+								value={currentSavings}
+								onChange={setCurrentSavings}
+								prefix="₹"
+								min={0}
+							/>
+							<InputRow
+								key={`future-savings-percent-${futureSavingsPercent}`}
+								label="Future retirement savings"
+								value={futureSavingsPercent}
+								onChange={setFutureSavingsPercent}
+								suffix="% of inc"
+								min={0}
+							/>
+						</div>
+					</section>
 				</div>
 
-				<div className="grid items-start gap-8 lg:grid-cols-[1.45fr_1fr]">
-					<div className="space-y-6">
-						{/* Section 1 */}
-						<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
-							<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-									1
-								</div>
-								Basic Details
-							</h2>
-							<div className="space-y-1">
-								<InputRow
-									key={`current-age-${currentAge}`}
-									label="Your current age"
-									value={currentAge}
-									onChange={handleCurrentAgeChange}
-									min={0}
-									max={Math.max(0, plannedRetirementAge - 1)}
-									step={1}
-								/>
-								<InputRow
-									key={`planned-retirement-age-${plannedRetirementAge}`}
-									label="Your planned retirement age"
-									value={plannedRetirementAge}
-									onChange={handlePlannedRetirementAgeChange}
-									min={currentAge + 1}
-									max={Math.max(currentAge + 1, lifeExpectancy - 1)}
-									step={1}
-								/>
-								<InputRow
-									key={`life-expectancy-${lifeExpectancy}`}
-									label="Your life expectancy"
-									value={lifeExpectancy}
-									onChange={handleLifeExpectancyChange}
-									min={plannedRetirementAge + 1}
-									max={130}
-									step={1}
-								/>
-								<InputRow
-									key={`current-income-${currentIncome}`}
-									label="Your current pre-tax income"
-									value={currentIncome}
-									onChange={setCurrentIncome}
-									prefix="$"
-									suffix="/ year"
-									min={0}
-								/>
-							</div>
-						</section>
+				<aside className="sticky top-24 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-6 text-white shadow-sm">
+					<div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
+					<div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-indigo-500/20 blur-3xl" />
 
-						{/* Section 2 */}
-						<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
-							<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-									2
-								</div>
-								Assumptions
-							</h2>
-							<div className="space-y-1">
-								<InputRow
-									key={`income-increase-rate-${incomeIncreaseRate}`}
-									label="Your current income increase"
-									value={incomeIncreaseRate}
-									onChange={setIncomeIncreaseRate}
-									suffix="% / yr"
-									min={0}
-								/>
-								<InputRow
-									key={`income-needed-percent-${incomeNeededPercent}`}
-									label="Income needed after retirement"
-									value={incomeNeededPercent}
-									onChange={setIncomeNeededPercent}
-									suffix="% of inc"
-									min={0}
-								/>
-								<InputRow
-									key={`investment-return-rate-${investmentReturnRate}`}
-									label="Average investment return"
-									value={investmentReturnRate}
-									onChange={setInvestmentReturnRate}
-									suffix="% / yr"
-								/>
-								<InputRow
-									key={`inflation-rate-${inflationRate}`}
-									label="Inflation rate"
-									value={inflationRate}
-									onChange={setInflationRate}
-									suffix="% / yr"
-									min={0}
-								/>
-							</div>
-						</section>
-
-						{/* Section 3 */}
-						<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-7">
-							<h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-3">
-								<div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-									3
-								</div>
-								Optional Details
-							</h2>
-							<div className="space-y-1">
-								<InputRow
-									key={`other-income-monthly-${otherIncomeMonthly}`}
-									label="Other income after retirement (Social Security, etc.)"
-									value={otherIncomeMonthly}
-									onChange={setOtherIncomeMonthly}
-									prefix="$"
-									suffix="/ mo"
-									min={0}
-								/>
-								<InputRow
-									key={`current-savings-${currentSavings}`}
-									label="Your current retirement savings"
-									value={currentSavings}
-									onChange={setCurrentSavings}
-									prefix="$"
-									min={0}
-								/>
-								<InputRow
-									key={`future-savings-percent-${futureSavingsPercent}`}
-									label="Future retirement savings"
-									value={futureSavingsPercent}
-									onChange={setFutureSavingsPercent}
-									suffix="% of inc"
-									min={0}
-								/>
-							</div>
-						</section>
-					</div>
-
-					<aside className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+					<div className="relative z-10">
 						<div>
-							<h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+							<h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
 								Portfolio at Retirement
 							</h2>
-							<div className="mb-2 text-4xl font-semibold tracking-tight text-slate-900">
+							<div className="mb-2 text-4xl font-semibold tracking-tight text-white">
 								{formatCurrency(balanceAtRetirement)}
 							</div>
-							<p className="text-sm text-slate-500">At age {plannedRetirementAge}</p>
+							<p className="text-sm text-slate-300">At age {plannedRetirementAge}</p>
 						</div>
 
-						<div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
-							<span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+						<div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/70 p-5">
+							<span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-400">
 								Status Overview
 							</span>
 							{ageDepleted ? (
-								<p className="text-lg font-semibold text-rose-600">
+								<p className="text-lg font-semibold text-rose-300">
 									Depletes at age {ageDepleted}
 								</p>
 							) : (
-								<p className="text-lg font-semibold text-emerald-600">
+								<p className="text-lg font-semibold text-emerald-300">
 									Lasts through life expectancy
 								</p>
 							)}
 
-							<div className="mt-4 space-y-2 border-t border-slate-200 pt-4">
+							<div className="mt-4 space-y-2 border-t border-slate-700 pt-4">
 								<div className="flex items-center justify-between py-1.5">
-									<span className="text-sm text-slate-600">
+									<span className="text-sm text-slate-300">
 										1st Year Est. Income
 									</span>
-									<span className="font-semibold text-slate-900">
+									<span className="font-semibold text-white">
 										{formatCurrency(firstYearIncomeNeeded)}
 									</span>
 								</div>
 								<div className="flex items-center justify-between py-1.5">
-									<span className="text-sm text-slate-600">
+									<span className="text-sm text-slate-300">
 										Final Balance (Age {lifeExpectancy})
 									</span>
 									<span
-										className={`font-semibold ${finalBalance > 0 ? "text-emerald-700" : "text-slate-500"}`}
+										className={`font-semibold ${finalBalance > 0 ? "text-emerald-300" : "text-slate-300"}`}
 									>
 										{formatCurrency(finalBalance)}
 									</span>
@@ -404,17 +394,17 @@ export default function RetirementCalculator() {
 							</div>
 						</div>
 
-						<div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
-							<p className="text-sm leading-6 text-blue-900">
+						<div className="mt-5 rounded-xl border border-slate-700 bg-slate-800/60 p-4">
+							<p className="text-sm leading-6 text-slate-200">
 								<span className="font-semibold">Analysis: </span>
 								{ageDepleted
 									? "Your current plan shows a shortfall before life expectancy. Consider increasing savings, delaying retirement, lowering living expenses, or finding additional income sources to bridge the gap."
 									: "Your plan is on track to support you throughout your expected retirement given your current assumptions."}
 							</p>
 						</div>
-					</aside>
-				</div>
-			</main>
-		</div>
+					</div>
+				</aside>
+			</div>
+		</main>
 	);
 }

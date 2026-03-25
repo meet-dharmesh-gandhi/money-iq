@@ -89,17 +89,30 @@ export default function Navbar({
 	const hasProfileAction = actions.some(
 		(action) => action.type === "link" && action.href === "/profile",
 	);
+	const hasCalculatorsAction = actions.some(
+		(action) => action.type === "link" && action.href === "/calculators",
+	);
 
 	const resolvedActions = useMemo(() => {
 		const authUsername = authUser?.username ?? null;
 		const isAdmin = authUser?.role === "admin";
+		const withCalculatorAction = hasCalculatorsAction
+			? actions
+			: [
+					{
+						type: "link" as const,
+						label: "Calculators",
+						href: "/calculators",
+					},
+					...actions,
+				];
 
 		if (!autoProfileLink || !authUsername || hasProfileAction || isAdmin) {
-			return actions;
+			return withCalculatorAction;
 		}
 
 		return [
-			...actions,
+			...withCalculatorAction,
 			{
 				type: "link" as const,
 				label: authUsername,
@@ -107,7 +120,7 @@ export default function Navbar({
 				className: "text-sm text-slate-700",
 			},
 		];
-	}, [actions, authUser, autoProfileLink, hasProfileAction]);
+	}, [actions, authUser, autoProfileLink, hasCalculatorsAction, hasProfileAction]);
 
 	const renderAction = (action: NavbarAction, index: number) => {
 		switch (action.type) {
