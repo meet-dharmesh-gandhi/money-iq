@@ -341,9 +341,8 @@ function startStockUpdates() {
 				console.error("Stock API update failed, falling back to fake data:", error.message);
 				const symbolsForFallback =
 					fallbackSymbols.length > 0 ? fallbackSymbols : lastRealtimeStockSymbols;
-				const fakeDataResult = fakeDataGenerator.generateMultipleSymbolsData(
-					symbolsForFallback,
-				);
+				const fakeDataResult =
+					fakeDataGenerator.generateMultipleSymbolsData(symbolsForFallback);
 				if (fakeDataResult.success && fakeDataResult.data.fetched.length > 0) {
 					latestUpdates = fakeDataResult.data.fetched;
 				}

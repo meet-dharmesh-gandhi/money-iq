@@ -90,10 +90,7 @@ export const useStockData = (currentPage: number, pageSize = 6, searchQuery = ""
 					// Replace points array with historical data for immediate sparkline population
 					return {
 						...stock,
-						points:
-							batch.prices.length > 0
-								? batch.prices.slice(-20)
-								: stock.points,
+						points: batch.prices.length > 0 ? batch.prices.slice(-20) : stock.points,
 					};
 				}
 				return stock;
