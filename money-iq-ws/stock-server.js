@@ -10,7 +10,7 @@ const ipoNseProvider = new IpoNseProvider({
 	cacheTtlMs: Number(process.env.IPO_REFRESH_INTERVAL_MS || 5000),
 });
 
-const WS_PORT = process.env.WS_PORT || 8080;
+const WS_PORT = process.env.PORT || process.env.WS_PORT || 8080;
 const ALL_IPOS_TOKEN = "__ALL_IPOS__";
 const ALL_STOCKS_TOKEN = "__ALL_STOCKS__";
 const REALTIME_STOCK_API_URL = process.env.REALTIME_STOCK_API_URL;
