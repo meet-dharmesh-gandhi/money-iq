@@ -306,6 +306,7 @@ function handleHttpRequest(req, res) {
 		sendJsonResponse(res, 200, {
 			message: "OK",
 		});
+		return;
 	}
 
 	sendJsonResponse(res, 404, { error: "Not Found" });
