@@ -79,7 +79,7 @@ Parameters specified in the angel one docs
 <table class="table table-hover table-bordered">
     <thead>
         <tr class="font">
-            <th tabindex="0">Param</th>
+            <th tabindex="0">Parameters</th>
             <th tabindex="0">Value</th>
             <th tabindex="0">Description</th>
         </tr>
